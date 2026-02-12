@@ -13,10 +13,14 @@ from pi_ai.types import (
 )
 
 
+def is_same_model(model: Model, msg: AssistantMessage) -> bool:
+    return model.id == msg.model and model.provider == msg.provider
+
+
 def transform_messages(
     messages: list[Message],
-    model: Model[Api],
-    normalize_tool_call_id: Callable[[str, Model[Api], AssistantMessage], str],
+    model: Model,
+    normalize_tool_call_id: Callable[[str, Model, AssistantMessage], str],
 ) -> list[Message]:
     tool_call_id_map = {}
 
