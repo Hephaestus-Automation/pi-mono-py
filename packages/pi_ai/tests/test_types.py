@@ -76,3 +76,99 @@ def test_event_stream_basic():
         assert await stream.result() == [100]
 
     asyncio.run(test())
+
+
+def test_message_serialization():
+    from pi_ai.types import (
+        UserMessage,
+        AssistantMessage,
+        ToolResultMessage,
+        TextContent,
+        ImageContent,
+        ToolCall,
+    )
+    import json
+
+    user_msg = UserMessage(
+        role="user",
+        content=[
+            TextContent(type="text", text="Hello"),
+            ImageContent(type="image", data="base64imagedata", mimeType="image/png"),
+        ],
+        timestamp=1234567890,
+    )
+    user_json = user_msg.model_dump()
+    assert user_json["role"] == "user"
+    assert len(user_json["content"]) == 2
+    assert user_json["content"][0]["text"] == "Hello"
+    assert user_json["content"][1]["data"] == "base64imagedata"
+
+    user_restored = UserMessage.model_validate(user_json)
+    assert user_restored.role == "user"
+    assert user_restored.content[0].text == "Hello"
+
+    assistant_msg = AssistantMessage(
+        role="assistant",
+        content=[
+            TextContent(type="text", text="Hi there!"),
+            ToolCall(
+                type="toolCall",
+                id="call_123",
+                name="get_weather",
+                arguments={"location": "Tokyo"},
+                thought_signature=None,
+            ),
+        ],
+        api="anthropic",
+        provider="anthropic",
+        model="claude-3-5-sonnet",
+        usage={"input": 100, "output": 50, "cache_read": 0, "cache_write": 0, "total_tokens": 150, "cost": {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0, "total": 0}},
+        timestamp=1234567891,
+        stop_reason="toolUse",
+    )
+    assistant_json = assistant_msg.model_dump()
+    assert assistant_json["role"] == "assistant"
+    assert assistant_json["model"] == "claude-3-5-sonnet"
+    assert assistant_json["content"][1]["name"] == "get_weather"
+
+    assistant_restored = AssistantMessage.model_validate(assistant_json)
+    assert assistant_restored.role == "assistant"
+    assert assistant_restored.content[1].name == "get_weather"
+
+    tool_result_msg = ToolResultMessage(
+        role="toolResult",
+        toolCallId="call_123",
+        toolName="get_weather",
+        content=[TextContent(type="text", text='{"temp": 25}')],
+        isError=False,
+        timestamp=1234567892,
+    )
+    tool_result_json = tool_result_msg.model_dump()
+    assert tool_result_json["tool_call_id"] == "call_123"
+    assert tool_result_json["tool_name"] == "get_weather"
+
+    tool_result_restored = ToolResultMessage.model_validate(tool_result_json)
+    assert tool_result_restored.tool_call_id == "call_123"
+
+
+def test_json_schema_generation():
+    from pi_ai.types import UserMessage, AssistantMessage, ToolResultMessage, TextContent
+
+    user_schema = UserMessage.model_json_schema()
+    assert "role" in user_schema["properties"]
+    assert "content" in user_schema["properties"]
+    assert "timestamp" in user_schema["properties"]
+
+    assistant_schema = AssistantMessage.model_json_schema()
+    assert "role" in assistant_schema["properties"]
+    assert "content" in assistant_schema["properties"]
+    assert "model" in assistant_schema["properties"]
+    assert "stopReason" in assistant_schema["properties"]
+
+    tool_result_schema = ToolResultMessage.model_json_schema()
+    assert "toolCallId" in tool_result_schema["properties"]
+    assert "toolName" in tool_result_schema["properties"]
+
+    text_content_schema = TextContent.model_json_schema()
+    assert "type" in text_content_schema["properties"]
+    assert "text" in text_content_schema["properties"]
