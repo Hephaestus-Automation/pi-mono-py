@@ -16,6 +16,24 @@ pi-agent = { workspace = true }
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["packages/pi_ai/tests", "packages/pi_agent/tests"]
+addopts = "--cov=pi_ai --cov=pi_agent --cov-report=term-missing --cov-report=html"
+
+[tool.coverage.run]
+source = ["packages/pi_ai/src/pi_ai", "packages/pi_agent/src/pi_agent"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
 
 [tool.ruff]
 target-version = "py311"
@@ -32,4 +50,5 @@ typeCheckingMode = "standard"
 dev = [
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
+    "pytest-cov>=5.0.0",
 ]
