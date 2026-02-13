@@ -9,6 +9,9 @@ from pi_ai.providers.openai import stream_openai_completions
 from pi_ai.providers.anthropic import stream_anthropic_messages
 from pi_ai.providers.google import stream_google
 from pi_ai.providers.zhipu import stream_zhipu
+from pi_ai.providers.mistral import stream_mistral
+from pi_ai.providers.xai import stream_xai
+from pi_ai.providers.openrouter import stream_openrouter
 from pi_ai.providers.transform import transform_messages
 
 StreamFunction = Callable[
@@ -83,11 +86,41 @@ register_api_provider(
     "zhipu",
 )
 
+register_api_provider(
+    ApiProvider(
+        api="mistral-chat",
+        stream=stream_mistral,
+        stream_simple=stream_mistral,
+    ),
+    "mistral",
+)
+
+register_api_provider(
+    ApiProvider(
+        api="xai-chat",
+        stream=stream_xai,
+        stream_simple=stream_xai,
+    ),
+    "xai",
+)
+
+register_api_provider(
+    ApiProvider(
+        api="openrouter-chat",
+        stream=stream_openrouter,
+        stream_simple=stream_openrouter,
+    ),
+    "openrouter",
+)
+
 __all__ = [
     "stream_openai_completions",
     "stream_anthropic_messages",
     "stream_google",
     "stream_zhipu",
+    "stream_mistral",
+    "stream_xai",
+    "stream_openrouter",
     "transform_messages",
     "ApiProvider",
 ]

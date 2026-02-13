@@ -22,6 +22,10 @@ KnownApi = Literal[
     "google-generative-ai",
     "google-gemini-cli",
     "google-vertex",
+    "mistral-chat",
+    "xai-chat",
+    "openrouter-chat",
+    "zhipu-chat",
 ]
 
 KnownProvider = Literal[
@@ -47,6 +51,7 @@ KnownProvider = Literal[
     "huggingface",
     "opencode",
     "kimi-coding",
+    "zhipu",
 ]
 
 

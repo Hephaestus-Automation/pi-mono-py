@@ -384,8 +384,258 @@ def register_all_models(
     anthropic_base_url: str = "https://api.anthropic.com",
     google_base_url: str = "https://generativelanguage.googleapis.com",
     zhipu_base_url: str = "https://open.bigmodel.cn/api/paas/v4",
+    mistral_base_url: str = "https://api.mistral.ai/v1",
+    xai_base_url: str = "https://api.x.ai/v1",
+    openrouter_base_url: str = "https://openrouter.ai/api/v1",
 ) -> None:
     register_openai_models(openai_base_url)
     register_anthropic_models(anthropic_base_url)
     register_google_models(google_base_url)
     register_zhipu_models(zhipu_base_url)
+    register_mistral_models(mistral_base_url)
+    register_xai_models(xai_base_url)
+    register_openrouter_models(openrouter_base_url)
+
+
+def register_mistral_models(base_url: str = "https://api.mistral.ai/v1") -> None:
+    """Register Mistral AI models."""
+    mistral_models = [
+        Model(
+            id="mistral-large-latest",
+            name="Mistral Large",
+            api="mistral-chat",
+            provider="mistral",
+            base_url=base_url,
+            reasoning=False,
+            input=["text", "image"],
+            cost=ModelCost(input=2.00, output=6.00, cache_read=0, cache_write=0),
+            context_window=128000,
+            max_tokens=8192,
+        ),
+        Model(
+            id="mistral-medium-latest",
+            name="Mistral Medium",
+            api="mistral-chat",
+            provider="mistral",
+            base_url=base_url,
+            reasoning=False,
+            input=["text", "image"],
+            cost=ModelCost(input=0.40, output=2.00, cache_read=0, cache_write=0),
+            context_window=128000,
+            max_tokens=8192,
+        ),
+        Model(
+            id="mistral-small-latest",
+            name="Mistral Small",
+            api="mistral-chat",
+            provider="mistral",
+            base_url=base_url,
+            reasoning=False,
+            input=["text"],
+            cost=ModelCost(input=0.10, output=0.30, cache_read=0, cache_write=0),
+            context_window=128000,
+            max_tokens=8192,
+        ),
+        Model(
+            id="codestral-latest",
+            name="Codestral",
+            api="mistral-chat",
+            provider="mistral",
+            base_url=base_url,
+            reasoning=False,
+            input=["text"],
+            cost=ModelCost(input=0.20, output=0.60, cache_read=0, cache_write=0),
+            context_window=256000,
+            max_tokens=8192,
+        ),
+        Model(
+            id="ministral-8b-latest",
+            name="Ministral 8B",
+            api="mistral-chat",
+            provider="mistral",
+            base_url=base_url,
+            reasoning=False,
+            input=["text"],
+            cost=ModelCost(input=0.10, output=0.10, cache_read=0, cache_write=0),
+            context_window=128000,
+            max_tokens=8192,
+        ),
+        Model(
+            id="ministral-3b-latest",
+            name="Ministral 3B",
+            api="mistral-chat",
+            provider="mistral",
+            base_url=base_url,
+            reasoning=False,
+            input=["text"],
+            cost=ModelCost(input=0.04, output=0.04, cache_read=0, cache_write=0),
+            context_window=128000,
+            max_tokens=8192,
+        ),
+    ]
+    for model in mistral_models:
+        register_model(model)
+
+
+def register_xai_models(base_url: str = "https://api.x.ai/v1") -> None:
+    """Register xAI (Grok) models."""
+    xai_models = [
+        Model(
+            id="grok-2-latest",
+            name="Grok 2",
+            api="xai-chat",
+            provider="xai",
+            base_url=base_url,
+            reasoning=False,
+            input=["text", "image"],
+            cost=ModelCost(input=2.00, output=10.00, cache_read=0, cache_write=0),
+            context_window=131072,
+            max_tokens=8192,
+        ),
+        Model(
+            id="grok-2-vision-latest",
+            name="Grok 2 Vision",
+            api="xai-chat",
+            provider="xai",
+            base_url=base_url,
+            reasoning=False,
+            input=["text", "image"],
+            cost=ModelCost(input=2.00, output=10.00, cache_read=0, cache_write=0),
+            context_window=32768,
+            max_tokens=8192,
+        ),
+        Model(
+            id="grok-beta",
+            name="Grok Beta",
+            api="xai-chat",
+            provider="xai",
+            base_url=base_url,
+            reasoning=False,
+            input=["text"],
+            cost=ModelCost(input=5.00, output=15.00, cache_read=0, cache_write=0),
+            context_window=131072,
+            max_tokens=8192,
+        ),
+        Model(
+            id="grok-2-1212",
+            name="Grok 2 1212",
+            api="xai-chat",
+            provider="xai",
+            base_url=base_url,
+            reasoning=False,
+            input=["text", "image"],
+            cost=ModelCost(input=2.00, output=10.00, cache_read=0, cache_write=0),
+            context_window=131072,
+            max_tokens=8192,
+        ),
+    ]
+    for model in xai_models:
+        register_model(model)
+
+
+def register_openrouter_models(base_url: str = "https://openrouter.ai/api/v1") -> None:
+    """Register OpenRouter gateway models.
+    
+    Note: OpenRouter provides access to many models through their gateway.
+    Here we register some popular ones. Users can add more as needed.
+    """
+    openrouter_models = [
+        Model(
+            id="anthropic/claude-sonnet-4",
+            name="Claude Sonnet 4 (OpenRouter)",
+            api="openrouter-chat",
+            provider="openrouter",
+            base_url=base_url,
+            reasoning=False,
+            input=["text", "image"],
+            cost=ModelCost(input=3.00, output=15.00, cache_read=0, cache_write=0),
+            context_window=200000,
+            max_tokens=8192,
+        ),
+        Model(
+            id="anthropic/claude-3.5-sonnet",
+            name="Claude 3.5 Sonnet (OpenRouter)",
+            api="openrouter-chat",
+            provider="openrouter",
+            base_url=base_url,
+            reasoning=False,
+            input=["text", "image"],
+            cost=ModelCost(input=3.00, output=15.00, cache_read=0, cache_write=0),
+            context_window=200000,
+            max_tokens=8192,
+        ),
+        Model(
+            id="openai/gpt-4o",
+            name="GPT-4o (OpenRouter)",
+            api="openrouter-chat",
+            provider="openrouter",
+            base_url=base_url,
+            reasoning=False,
+            input=["text", "image"],
+            cost=ModelCost(input=2.50, output=10.00, cache_read=0, cache_write=0),
+            context_window=128000,
+            max_tokens=4096,
+        ),
+        Model(
+            id="openai/gpt-4o-mini",
+            name="GPT-4o Mini (OpenRouter)",
+            api="openrouter-chat",
+            provider="openrouter",
+            base_url=base_url,
+            reasoning=False,
+            input=["text", "image"],
+            cost=ModelCost(input=0.15, output=0.60, cache_read=0, cache_write=0),
+            context_window=128000,
+            max_tokens=4096,
+        ),
+        Model(
+            id="google/gemini-pro-1.5",
+            name="Gemini 1.5 Pro (OpenRouter)",
+            api="openrouter-chat",
+            provider="openrouter",
+            base_url=base_url,
+            reasoning=False,
+            input=["text", "image"],
+            cost=ModelCost(input=1.25, output=5.00, cache_read=0, cache_write=0),
+            context_window=1000000,
+            max_tokens=8192,
+        ),
+        Model(
+            id="meta-llama/llama-3.1-70b-instruct",
+            name="Llama 3.1 70B (OpenRouter)",
+            api="openrouter-chat",
+            provider="openrouter",
+            base_url=base_url,
+            reasoning=False,
+            input=["text"],
+            cost=ModelCost(input=0.52, output=0.75, cache_read=0, cache_write=0),
+            context_window=131072,
+            max_tokens=8192,
+        ),
+        Model(
+            id="mistralai/mistral-large",
+            name="Mistral Large (OpenRouter)",
+            api="openrouter-chat",
+            provider="openrouter",
+            base_url=base_url,
+            reasoning=False,
+            input=["text", "image"],
+            cost=ModelCost(input=2.00, output=6.00, cache_read=0, cache_write=0),
+            context_window=128000,
+            max_tokens=8192,
+        ),
+        Model(
+            id="x-ai/grok-beta",
+            name="Grok Beta (OpenRouter)",
+            api="openrouter-chat",
+            provider="openrouter",
+            base_url=base_url,
+            reasoning=False,
+            input=["text"],
+            cost=ModelCost(input=5.00, output=15.00, cache_read=0, cache_write=0),
+            context_window=131072,
+            max_tokens=8192,
+        ),
+    ]
+    for model in openrouter_models:
+        register_model(model)

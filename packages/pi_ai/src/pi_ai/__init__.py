@@ -7,12 +7,18 @@ from pi_ai.models import (
     get_models,
     get_providers,
     register_model,
+    register_mistral_models,
+    register_xai_models,
+    register_openrouter_models,
 )
 from pi_ai.providers import (
     ApiProvider,
     stream_anthropic_messages,
     stream_google,
     stream_openai_completions,
+    stream_mistral,
+    stream_xai,
+    stream_openrouter,
 )
 from pi_ai.providers.transform import transform_messages
 from pi_ai.stream import complete, complete_simple, stream, stream_simple
@@ -50,11 +56,17 @@ __all__ = [
     "stream_openai_completions",
     "stream_anthropic_messages",
     "stream_google",
+    "stream_mistral",
+    "stream_xai",
+    "stream_openrouter",
     "transform_messages",
     "get_model",
     "get_models",
     "get_providers",
     "register_model",
+    "register_mistral_models",
+    "register_xai_models",
+    "register_openrouter_models",
     "get_env_api_key",
     "AssistantMessageEventStream",
     "Api",
