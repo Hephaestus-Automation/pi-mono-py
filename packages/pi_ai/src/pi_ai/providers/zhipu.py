@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any
+from typing import Any, cast
 
 from pi_ai.types import (
     AssistantMessage,
@@ -78,7 +78,7 @@ def stream_zhipu(
                 total_tokens=0,
                 cost=UsageCost(),
             ),
-            stop_reason=StopReason.stop,
+            stop_reason="stop",
             timestamp=0,
         )
 
@@ -134,7 +134,7 @@ def stream_zhipu(
                         delta = choice.get("delta", {})
 
                         if choice.get("finish_reason"):
-                            output.stop_reason = _map_finish_reason(choice["finish_reason"])
+                            output.stop_reason = cast(StopReason, _map_finish_reason(choice["finish_reason"]))
 
                         if "usage" in data:
                             usage_data = data["usage"]
@@ -221,13 +221,13 @@ def stream_zhipu(
             stream.push(DoneEvent(reason=output.stop_reason, message=output))
 
         except asyncio.CancelledError:
-            output.stop_reason = StopReason.aborted
+            output.stop_reason = "aborted"
             output.error_message = "Request was aborted"
-            stream.push(ErrorEvent(reason=StopReason.aborted, error=output))
+            stream.push(ErrorEvent(reason="aborted", error=output))
         except Exception as e:
-            output.stop_reason = StopReason.error
+            output.stop_reason = "error"
             output.error_message = str(e)
-            stream.push(ErrorEvent(reason=StopReason.error, error=output))
+            stream.push(ErrorEvent(reason="error", error=output))
         finally:
             stream.end()
 
@@ -235,14 +235,14 @@ def stream_zhipu(
     return stream
 
 
-def _map_finish_reason(reason: str) -> StopReason:
+def _map_finish_reason(reason: str) -> str:
     mapping = {
-        "stop": StopReason.stop,
-        "length": StopReason.length,
-        "tool_calls": StopReason.toolUse,
-        "content_filter": StopReason.stop,
+        "stop": "stop",
+        "length": "length",
+        "tool_calls": "toolUse",
+        "content_filter": "stop",
     }
-    return mapping.get(reason, StopReason.stop)
+    return mapping.get(reason, "stop")
 
 
 def _build_params(
@@ -271,7 +271,6 @@ def _build_params(
     }
 
     if context.system_prompt:
-        params.insert(0, {"role": "system", "content": context.system_prompt})
         params["messages"] = [{"role": "system", "content": context.system_prompt}] + params["messages"]
 
     if context.tools:

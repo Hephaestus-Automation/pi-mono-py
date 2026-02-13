@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any
+from typing import Any, cast
 
 from pi_ai.types import (
     AssistantMessage,
@@ -106,7 +106,7 @@ def stream_anthropic_messages(
                 total_tokens=0,
                 cost=UsageCost(),
             ),
-            stop_reason=StopReason.stop,
+            stop_reason="stop",
             timestamp=0,
         )
 
@@ -241,10 +241,10 @@ def stream_anthropic_messages(
 
                     elif event_type == "message_stop":
                         finish_reason = _map_anthropic_stop_reason(event.message.stop_reason)
-                        output.stop_reason = finish_reason
+                        output.stop_reason = cast(StopReason, finish_reason)
 
                         if finish_reason == "toolUse" and output.content:
-                            output.stop_reason = StopReason.toolUse
+                            output.stop_reason = cast(StopReason, "toolUse")
 
                         output.usage = Usage(
                             input=0,
@@ -259,13 +259,13 @@ def stream_anthropic_messages(
                         return
 
         except asyncio.CancelledError:
-            output.stop_reason = StopReason.aborted
+            output.stop_reason = "aborted"
             output.error_message = "Request was aborted"
-            stream.push(ErrorEvent(reason=StopReason.aborted, error=output))
+            stream.push(ErrorEvent(reason="aborted", error=output))
         except Exception as e:
-            output.stop_reason = StopReason.error
+            output.stop_reason = "error"
             output.error_message = str(e)
-            stream.push(ErrorEvent(reason=StopReason.error, error=output))
+            stream.push(ErrorEvent(reason="error", error=output))
         finally:
             stream.end()
 
@@ -273,13 +273,13 @@ def stream_anthropic_messages(
     return stream
 
 
-def _map_anthropic_stop_reason(reason: str) -> StopReason:
+def _map_anthropic_stop_reason(reason: str) -> str:
     mapping = {
-        "end_turn": StopReason.stop,
-        "max_tokens": StopReason.length,
-        "stop_sequence": StopReason.toolUse,
+        "end_turn": "stop",
+        "max_tokens": "length",
+        "stop_sequence": "toolUse",
     }
-    return mapping.get(reason, StopReason.stop)
+    return mapping.get(reason, "stop")
 
 
 def _build_params(
