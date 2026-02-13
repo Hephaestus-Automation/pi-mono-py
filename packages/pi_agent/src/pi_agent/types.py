@@ -69,6 +69,13 @@ class AgentLoopConfig(SimpleStreamOptions):
     get_follow_up_messages: Callable[
         [], Awaitable[list[AgentMessage]]
     ] | None = Field(default=None, alias="getFollowUpMessages")
+    # Retry configuration
+    max_retries: int = Field(default=3, alias="maxRetries")
+    retry_delay_ms: int = Field(default=1000, alias="retryDelayMs")
+    retry_on_rate_limit: bool = Field(default=True, alias="retryOnRateLimit")
+    # Timeout configuration
+    tool_timeout_ms: int | None = Field(default=60000, alias="toolTimeoutMs")
+    llm_timeout_ms: int | None = Field(default=120000, alias="llmTimeoutMs")
 
 
 class AgentState(BaseModel):
