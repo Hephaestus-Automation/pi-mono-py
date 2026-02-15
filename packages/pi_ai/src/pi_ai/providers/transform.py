@@ -45,13 +45,15 @@ def transform_messages(
                         transformed_content.append({"type": "text", "text": block.thinking})
                 elif block.type == "toolCall":
                     normalized_id = normalize_tool_call_id(block.id, model, assistant_msg)
+                    block_dict = block.model_dump() if hasattr(block, 'model_dump') else dict(block)
                     transformed_content.append({
-                        **{k: v for k, v in block.items() if k != "id"},
+                        **{k: v for k, v in block_dict.items() if k != "id"},
                         "id": normalized_id,
                     })
 
+            msg_dict = assistant_msg.model_dump() if hasattr(assistant_msg, 'model_dump') else dict(assistant_msg)
             first_pass.append({
-                **{k: v for k, v in assistant_msg.items() if k != "content"},
+                **{k: v for k, v in msg_dict.items() if k != "content"},
                 "content": transformed_content,
             })
 
@@ -60,13 +62,16 @@ def transform_messages(
     existing_tool_result_ids = set()
 
     for msg in first_pass:
-        if msg.role == "user":
+        role = msg.get("role") if isinstance(msg, dict) else msg.role
+        if role == "user":
             second_pass.append(msg)
-        elif msg.role == "toolResult":
-            existing_tool_result_ids.add(msg.tool_call_id)
+        elif role == "toolResult":
+            tc_id = msg.get("tool_call_id") if isinstance(msg, dict) else msg.tool_call_id
+            existing_tool_result_ids.add(tc_id)
             second_pass.append(msg)
-        elif msg.role == "assistant":
-            tool_calls = [b for b in msg.content if isinstance(b, ToolCall)]
+        elif role == "assistant":
+            content = msg.get("content") if isinstance(msg, dict) else msg.content
+            tool_calls = [b for b in content if isinstance(b, ToolCall)]
             if tool_calls:
                 for tc in tool_calls:
                     pending_tool_calls.append(tc)
@@ -154,15 +159,17 @@ def transform_messages(
                     original_id = block.id
                     normalized_id = tool_call_id_map.get(original_id, original_id)
                     if normalized_id != original_id:
+                        block_dict = block.model_dump() if hasattr(block, 'model_dump') else dict(block)
                         transformed_content.append({
-                            **{k: v for k, v in block.items() if k != "id"},
+                            **{k: v for k, v in block_dict.items() if k != "id"},
                             "id": normalized_id,
                         })
                     else:
                         transformed_content.append(block)
 
+            msg_dict = msg.model_dump() if hasattr(msg, 'model_dump') else dict(msg)
             result.append({
-                **{k: v for k, v in msg.items() if k != "content"},
+                **{k: v for k, v in msg_dict.items() if k != "content"},
                 "content": transformed_content,
             })
         else:
