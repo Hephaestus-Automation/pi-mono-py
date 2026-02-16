@@ -2,21 +2,18 @@ from __future__ import annotations
 
 import asyncio
 from time import time
-from typing import Any, Callable, Literal, cast
+from typing import Any, Literal, cast
 
 from pi_ai.models import get_model
 from pi_ai.stream import stream_simple
 from pi_ai.types import (
-    Context as AiContext,
+    AssistantMessage,
     ImageContent,
     Message,
     Model,
     TextContent,
-    ThinkingContent,
     ToolCall,
-    AssistantMessage,
 )
-from collections.abc import Awaitable
 
 from .loop import agent_loop, agent_loop_continue
 from .types import (
@@ -27,18 +24,15 @@ from .types import (
     AgentMessage,
     AgentState,
     AgentTool,
-    AgentToolResult,
-    StreamFn,
     ThinkingLevel,
 )
 
 
 def _default_convert_to_llm(messages: list[AgentMessage]) -> list[Message]:
-    from pi_ai.types import UserMessage, AssistantMessage, ToolResultMessage
+    from pi_ai.types import AssistantMessage, ToolResultMessage, UserMessage
 
     return [
-        m for m in messages
-        if isinstance(m, (UserMessage, AssistantMessage, ToolResultMessage))
+        m for m in messages if isinstance(m, (UserMessage, AssistantMessage, ToolResultMessage))
     ]
 
 
@@ -221,9 +215,7 @@ class Agent:
         elif isinstance(input, str):
             from pi_ai.types import UserMessage
 
-            content: list[TextContent | ImageContent] = [
-                TextContent(type="text", text=input)
-            ]
+            content: list[TextContent | ImageContent] = [TextContent(type="text", text=input)]
             if images:
                 content.extend(images)
 
@@ -235,7 +227,9 @@ class Agent:
 
     async def continue_(self) -> None:
         if self._state.is_streaming:
-            raise RuntimeError("Agent is already processing. Wait for completion before continuing.")
+            raise RuntimeError(
+                "Agent is already processing. Wait for completion before continuing."
+            )
 
         messages = self._state.messages
         if len(messages) == 0:
@@ -318,9 +312,7 @@ class Agent:
             stream = (
                 agent_loop(messages, context, config, self._cancel_event, self._stream_fn)
                 if messages
-                else agent_loop_continue(
-                    context, config, self._cancel_event, self._stream_fn
-                )
+                else agent_loop_continue(context, config, self._cancel_event, self._stream_fn)
             )
 
             async for event in stream:
@@ -363,13 +355,16 @@ class Agent:
                 self._emit(event)
 
             if partial and isinstance(partial, AssistantMessage):
-                msg = cast(AssistantMessage, partial)
+                msg = cast("AssistantMessage", partial)
                 if len(msg.content) > 0:
                     only_empty = not any(
                         (
-                            isinstance(c, ThinkingContent) and c.thinking.strip()
-                            or isinstance(c, TextContent) and c.text.strip()
-                            or isinstance(c, ToolCall) and c.name.strip()
+                            isinstance(c, ThinkingContent)
+                            and c.thinking.strip()
+                            or isinstance(c, TextContent)
+                            and c.text.strip()
+                            or isinstance(c, ToolCall)
+                            and c.name.strip()
                         )
                         for c in msg.content
                     )
@@ -380,7 +375,7 @@ class Agent:
                             raise RuntimeError("Request was aborted")
 
         except Exception as err:
-            from pi_ai.types import Usage, UsageCost, StopReason
+            from pi_ai.types import StopReason, Usage, UsageCost
 
             error_message = AssistantMessage(
                 role="assistant",

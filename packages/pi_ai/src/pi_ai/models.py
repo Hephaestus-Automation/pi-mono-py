@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from .types import Model, ModelCost, Usage, UsageCost
 
-
 _model_registry: dict[str, dict[str, Model]] = {}
 
 
@@ -381,7 +380,7 @@ def register_zhipu_models(base_url: str = "https://open.bigmodel.cn/api/paas/v4"
 
 def register_azure_openai_models(azure_resource: str = "your-resource-name") -> None:
     """Register Azure OpenAI models.
-    
+
     Note: Azure OpenAI requires deployment-based URLs. The base_url should be
     https://{resource-name}.openai.azure.com and model.id should be {deployment-id}.
     Users should call register_model() with their specific deployment names.
@@ -599,7 +598,7 @@ def register_xai_models(base_url: str = "https://api.x.ai/v1") -> None:
 
 def register_openrouter_models(base_url: str = "https://openrouter.ai/api/v1") -> None:
     """Register OpenRouter gateway models.
-    
+
     Note: OpenRouter provides access to many models through their gateway.
     Here we register some popular ones. Users can add more as needed.
     """

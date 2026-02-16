@@ -4,33 +4,27 @@ import asyncio
 import json
 from typing import Any, cast
 
+from ..env_keys import get_env_api_key
+from ..event_stream import AssistantMessageEventStream
+from ..models import calculate_cost
 from ..types import (
     AssistantMessage,
-    AssistantMessageEvent,
     Context,
     DoneEvent,
     ErrorEvent,
-    Message,
     Model,
-    SimpleStreamOptions,
     StartEvent,
-    StreamOptions,
     StopReason,
+    StreamOptions,
     TextContent,
     TextDeltaEvent,
     ThinkingContent,
     ThinkingDeltaEvent,
-    ThinkingLevel,
-    Tool,
     ToolCall,
     ToolcallEndEvent,
     Usage,
     UsageCost,
 )
-from ..event_stream import AssistantMessageEventStream
-from ..env_keys import get_env_api_key
-from ..models import calculate_cost
-from ..stream import stream_simple
 
 try:
     from google.generativeai import GenerativeModel, Part  # type: ignore[import-untyped]
@@ -130,17 +124,27 @@ def stream_google(
         )
 
         try:
-            api_key = options.api_key if options and options.api_key else get_env_api_key(model.provider)
+            api_key = (
+                options.api_key if options and options.api_key else get_env_api_key(model.provider)
+            )
             if not api_key:
                 raise ValueError(f"No API key for provider: {model.provider}")
 
             if httpx is None:
-                raise ImportError("httpx is required for Google provider. Install with: pip install httpx")
+                raise ImportError(
+                    "httpx is required for Google provider. Install with: pip install httpx"
+                )
 
-            opts = GoogleOptions() if options is None else GoogleOptions(
-                tool_choice=options.tool_choice,
-                thinking_enabled=options.reasoning if options.reasoning else False,
-                thinking_budget_tokens=options.thinking_budgets.get("high") if options.thinking_budgets else None,
+            opts = (
+                GoogleOptions()
+                if options is None
+                else GoogleOptions(
+                    tool_choice=options.tool_choice,
+                    thinking_enabled=options.reasoning if options.reasoning else False,
+                    thinking_budget_tokens=options.thinking_budgets.get("high")
+                    if options.thinking_budgets
+                    else None,
+                )
             )
 
             params = _build_params(model, context, opts)
@@ -228,7 +232,11 @@ def stream_google(
                         global tool_call_counter
                         current_block.id = f"{function_name}_{tool_call_counter}"
                         tool_call_counter += 1
-                        current_block.arguments.update(json.loads(function_args) if isinstance(function_args, str) else function_args)
+                        current_block.arguments.update(
+                            json.loads(function_args)
+                            if isinstance(function_args, str)
+                            else function_args
+                        )
 
                         stream.push(
                             ToolcallEndEvent(
@@ -258,13 +266,14 @@ def stream_google(
 
                 finish_reason = candidate.get("finishReason")
                 if finish_reason:
-                    output.stop_reason = cast(StopReason, _map_google_stop_reason(finish_reason))
+                    output.stop_reason = cast("StopReason", _map_google_stop_reason(finish_reason))
 
                 usage_metadata = candidate.get("usageMetadata", {})
                 if usage_metadata:
                     output.usage = Usage(
                         input=usage_metadata.get("promptTokenCount", 0),
-                        output=usage_metadata.get("candidatesTokenCount", 0) + usage_metadata.get("thoughtsTokenCount", 0),
+                        output=usage_metadata.get("candidatesTokenCount", 0)
+                        + usage_metadata.get("thoughtsTokenCount", 0),
                         cacheRead=0,
                         cacheWrite=0,
                         totalTokens=usage_metadata.get("totalTokenCount", 0),
@@ -311,10 +320,12 @@ def _build_params(
         elif msg.role == "assistant":
             messages.append({"role": "model", "parts": _format_assistant_parts(msg.content)})
         elif msg.role == "toolResult":
-            messages.append({
-                "role": "user",
-                "parts": _format_user_parts(msg.content),
-            })
+            messages.append(
+                {
+                    "role": "user",
+                    "parts": _format_user_parts(msg.content),
+                }
+            )
 
     params: dict[str, Any] = {"model": model.id, "contents": messages}
 
@@ -324,13 +335,15 @@ def _build_params(
     if context.tools:
         tools = []
         for tool in context.tools:
-            tools.append({
-                "functionDeclarations": {
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": tool.parameters,
-                },
-            })
+            tools.append(
+                {
+                    "functionDeclarations": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.parameters,
+                    },
+                }
+            )
         params["tools"] = tools
 
     if options.temperature is not None:
@@ -356,12 +369,14 @@ def _format_assistant_parts(content: list) -> list[dict[str, Any]]:
         elif block.type == "thinking":
             result.append({"thought": block.thinking})
         elif block.type == "toolCall":
-            result.append({
-                "functionResponse": {
-                    "name": block.name,
-                    "response": {},
-                },
-            })
+            result.append(
+                {
+                    "functionResponse": {
+                        "name": block.name,
+                        "response": {},
+                    },
+                }
+            )
     return result
 
 
@@ -372,7 +387,7 @@ async def http_client_stream(
 ) -> Any:
     if httpx is None:
         raise ImportError("httpx is required for Google provider. Install with: pip install httpx")
-    
+
     url = f"{model.base_url}/v1beta/models/{model.id}:streamGenerateContent"
 
     async with httpx.AsyncClient(
@@ -383,7 +398,6 @@ async def http_client_stream(
             **headers,
         },
         timeout=60.0,
-    ) as client:
-        async with client.stream("POST", url, json=params) as response:
-            async for line in response.aiter_lines():
-                yield line
+    ) as client, client.stream("POST", url, json=params) as response:
+        async for line in response.aiter_lines():
+            yield line

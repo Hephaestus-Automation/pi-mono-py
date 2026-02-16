@@ -4,17 +4,18 @@ import asyncio
 import json
 from typing import Any, cast
 
+from ..env_keys import get_env_api_key
+from ..event_stream import AssistantMessageEventStream
+from ..models import calculate_cost
 from ..types import (
     AssistantMessage,
-    AssistantMessageEvent,
+    CacheRetention,
     Context,
     DoneEvent,
     ErrorEvent,
-    Message,
     Model,
     SimpleStreamOptions,
     StartEvent,
-    StreamOptions,
     StopReason,
     TextContent,
     TextDeltaEvent,
@@ -22,21 +23,14 @@ from ..types import (
     TextStartEvent,
     ThinkingContent,
     ThinkingEndEvent,
-    ThinkingLevel,
     ThinkingStartEvent,
-    Tool,
     ToolCall,
     ToolcallDeltaEvent,
     ToolcallEndEvent,
     ToolcallStartEvent,
     Usage,
     UsageCost,
-    CacheRetention,
 )
-from ..event_stream import AssistantMessageEventStream
-from ..env_keys import get_env_api_key
-from ..models import calculate_cost
-from ..stream import stream_simple
 
 try:
     from anthropic import Anthropic
@@ -48,17 +42,30 @@ def normalize_mistral_tool_id(tool_id: str) -> str:
     normalized = "".join(c for c in tool_id if c.isalnum())
     if len(normalized) < 9:
         padding = "ABCDEFGHI"
-        normalized = normalized + padding[0: 9 - len(normalized)]
+        normalized = normalized + padding[0 : 9 - len(normalized)]
     elif len(normalized) > 9:
         normalized = normalized[0:9]
     return normalized
 
 
 CLAUDE_CODE_TOOLS = [
-    "Read", "Write", "Edit", "Bash", "Grep", "Glob",
-    "AskUserQuestion", "EnterPlanMode", "ExitPlanMode", "KillShell",
-    "NotebookEdit", "Skill", "Task", "TaskOutput", "TodoWrite",
-    "WebFetch", "WebSearch",
+    "Read",
+    "Write",
+    "Edit",
+    "Bash",
+    "Grep",
+    "Glob",
+    "AskUserQuestion",
+    "EnterPlanMode",
+    "ExitPlanMode",
+    "KillShell",
+    "NotebookEdit",
+    "Skill",
+    "Task",
+    "TaskOutput",
+    "TodoWrite",
+    "WebFetch",
+    "WebSearch",
 ]
 
 CC_TOOL_LOOKUP = {t.lower(): t for t in CLAUDE_CODE_TOOLS}
@@ -111,18 +118,26 @@ def stream_anthropic_messages(
         )
 
         try:
-            api_key = options.api_key if options and options.api_key else get_env_api_key(model.provider)
+            api_key = (
+                options.api_key if options and options.api_key else get_env_api_key(model.provider)
+            )
             if not api_key:
                 raise ValueError(f"No API key for provider: {model.provider}")
 
             if Anthropic is None:
-                raise ImportError("anthropic is required for Anthropic provider. Install with: pip install anthropic")
+                raise ImportError(
+                    "anthropic is required for Anthropic provider. Install with: pip install anthropic"
+                )
 
             client = Anthropic(api_key=api_key, base_url=model.base_url)  # type: ignore[misc]
 
-            opts = AnthropicOptions() if options is None else AnthropicOptions(
-                thinking_enabled=options.reasoning is not None,
-                thinking_level=options.reasoning if options.reasoning else None,
+            opts = (
+                AnthropicOptions()
+                if options is None
+                else AnthropicOptions(
+                    thinking_enabled=options.reasoning is not None,
+                    thinking_level=options.reasoning if options.reasoning else None,
+                )
             )
 
             params = _build_params(model, context, opts)
@@ -164,7 +179,9 @@ def stream_anthropic_messages(
                                 TextStartEvent(contentIndex=block_index[-1], partial=output)
                             )
                         elif block.type == "thinking":
-                            current_block = ThinkingContent(type="thinking", thinking="", thinking_signature=None)
+                            current_block = ThinkingContent(
+                                type="thinking", thinking="", thinking_signature=None
+                            )
                             output.content.append(current_block)
                             block_index.append(len(output.content) - 1)
                             stream.push(
@@ -241,10 +258,10 @@ def stream_anthropic_messages(
 
                     elif event_type == "message_stop":
                         finish_reason = _map_anthropic_stop_reason(event.message.stop_reason)
-                        output.stop_reason = cast(StopReason, finish_reason)
+                        output.stop_reason = cast("StopReason", finish_reason)
 
                         if finish_reason == "toolUse" and output.content:
-                            output.stop_reason = cast(StopReason, "toolUse")
+                            output.stop_reason = cast("StopReason", "toolUse")
 
                         output.usage = Usage(
                             input=0,
@@ -293,12 +310,16 @@ def _build_params(
         if msg.role == "user":
             messages.append({"role": "user", "content": _format_user_content(msg.content)})
         elif msg.role == "assistant":
-            messages.append({"role": "assistant", "content": _format_assistant_content(msg.content)})
+            messages.append(
+                {"role": "assistant", "content": _format_assistant_content(msg.content)}
+            )
         elif msg.role == "toolResult":
-            messages.append({
-                "role": "user",
-                "content": _format_user_content(msg.content),
-            })
+            messages.append(
+                {
+                    "role": "user",
+                    "content": _format_user_content(msg.content),
+                }
+            )
 
     params: dict[str, Any] = {
         "model": model.id,
@@ -313,11 +334,13 @@ def _build_params(
     if context.tools:
         tools = []
         for tool in context.tools:
-            tools.append({
-                "name": tool.name,
-                "description": tool.description,
-                "input_schema": tool.parameters,
-            })
+            tools.append(
+                {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "input_schema": tool.parameters,
+                }
+            )
         params["tools"] = tools
 
     return params
@@ -336,16 +359,20 @@ def _format_assistant_content(content: list) -> list[dict[str, Any]]:
             result.append({"type": "text", "text": block.text})
         elif block.type == "thinking":
             if block.thinking:
-                result.append({
-                    "type": "thinking",
-                    "thinking": block.thinking,
-                    "thinking_signature": block.thinking_signature,
-                })
+                result.append(
+                    {
+                        "type": "thinking",
+                        "thinking": block.thinking,
+                        "thinking_signature": block.thinking_signature,
+                    }
+                )
             elif block.type == "toolCall":
-                result.append({
-                    "type": "tool_use",
-                    "id": block.id,
-                    "name": block.name,
-                    "input": block.arguments,
-                })
+                result.append(
+                    {
+                        "type": "tool_use",
+                        "id": block.id,
+                        "name": block.name,
+                        "input": block.arguments,
+                    }
+                )
     return result

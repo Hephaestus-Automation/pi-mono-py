@@ -1,7 +1,7 @@
+
+import httpx
 import pytest
 import respx
-import httpx
-from unittest.mock import AsyncMock, MagicMock
 
 
 class MockResponses:
@@ -89,9 +89,7 @@ class MockResponses:
         "candidates": [
             {
                 "content": {
-                    "parts": [
-                        {"type": "text", "text": "Hello from Gemini!"}
-                    ],
+                    "parts": [{"type": "text", "text": "Hello from Gemini!"}],
                     "role": "model",
                 },
                 "finishReason": "STOP",
@@ -107,6 +105,7 @@ class MockResponses:
 
 def format_sse(data: dict) -> str:
     import json
+
     return f"data: {json.dumps(data)}\n\n"
 
 
@@ -120,8 +119,11 @@ def mock_openai_stream():
             + "data: [DONE]\n\n"
         )
         respx_mock.post(f"{base_url}/chat/completions").mock(
-            return_value=httpx.Response(200, content=sse_data.encode(), headers={"content-type": "text/event-stream"})
+            return_value=httpx.Response(
+                200, content=sse_data.encode(), headers={"content-type": "text/event-stream"}
+            )
         )
+
     return _mock
 
 
@@ -135,17 +137,23 @@ def mock_anthropic_stream():
             + format_sse(MockResponses.MOCK_ANTHROPIC_MESSAGE_STOP)
         )
         respx_mock.post(f"{base_url}/v1/messages").mock(
-            return_value=respx.Response(200, content=sse_data, headers={"content-type": "text/event-stream"})
+            return_value=respx.Response(
+                200, content=sse_data, headers={"content-type": "text/event-stream"}
+            )
         )
+
     return _mock
 
 
 @pytest.fixture
 def mock_google_stream():
     def _mock(respx_mock, base_url="https://generativelanguage.googleapis.com"):
-        import json
+
         sse_data = format_sse(MockResponses.MOCK_GOOGLE_RESPONSE)
         respx_mock.post(f"{base_url}/v1beta/models/gemini-2.0-flash:streamGenerateContent").mock(
-            return_value=respx.Response(200, content=sse_data, headers={"content-type": "text/event-stream"})
+            return_value=respx.Response(
+                200, content=sse_data, headers={"content-type": "text/event-stream"}
+            )
         )
+
     return _mock

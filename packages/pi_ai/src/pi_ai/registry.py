@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from .event_stream import AssistantMessageEventStream
-from .types import Api, Context, Model, SimpleStreamOptions, StreamOptions
+from .types import Context, Model, StreamOptions
 
 StreamFunction = Callable[
     [Model, Context, StreamOptions | None],

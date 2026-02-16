@@ -1,16 +1,15 @@
 import pytest
-
 from pi_ai.models import (
-    register_model,
+    calculate_cost,
     get_model,
     get_models,
     get_providers,
-    register_openai_models,
+    models_are_equal,
+    register_all_models,
     register_anthropic_models,
     register_google_models,
-    register_all_models,
-    calculate_cost,
-    models_are_equal,
+    register_model,
+    register_openai_models,
 )
 from pi_ai.types import Model, ModelCost, Usage, UsageCost
 
@@ -18,6 +17,7 @@ from pi_ai.types import Model, ModelCost, Usage, UsageCost
 @pytest.fixture(autouse=True)
 def clear_registry():
     from pi_ai import models
+
     models._model_registry.clear()
     yield
     models._model_registry.clear()
@@ -37,9 +37,9 @@ class TestModelRegistry:
             context_window=8000,
             max_tokens=1000,
         )
-        
+
         register_model(model)
-        
+
         retrieved = get_model("test-provider", "test-model")
         assert retrieved is not None
         assert retrieved.id == "test-model"
@@ -74,10 +74,10 @@ class TestModelRegistry:
             context_window=1000,
             max_tokens=100,
         )
-        
+
         register_model(model1)
         register_model(model2)
-        
+
         providers = get_providers()
         assert "provider1" in providers
         assert "provider2" in providers
@@ -95,13 +95,13 @@ class TestModelRegistry:
             context_window=1000,
             max_tokens=100,
         )
-        
+
         register_model(model)
-        
+
         models = get_models("test-provider")
         assert len(models) == 1
         assert models[0].id == "test-model"
-        
+
         empty = get_models("nonexistent-provider")
         assert empty == []
 
@@ -109,10 +109,10 @@ class TestModelRegistry:
 class TestPredefinedModels:
     def test_register_openai_models(self):
         register_openai_models()
-        
+
         providers = get_providers()
         assert "openai" in providers
-        
+
         models = get_models("openai")
         model_ids = [m.id for m in models]
         assert "gpt-4o" in model_ids
@@ -121,27 +121,27 @@ class TestPredefinedModels:
 
     def test_register_anthropic_models(self):
         register_anthropic_models()
-        
+
         providers = get_providers()
         assert "anthropic" in providers
-        
+
         models = get_models("anthropic")
         model_ids = [m.id for m in models]
         assert "claude-3-5-sonnet-20241022" in model_ids
 
     def test_register_google_models(self):
         register_google_models()
-        
+
         providers = get_providers()
         assert "google" in providers
-        
+
         models = get_models("google")
         model_ids = [m.id for m in models]
         assert "gemini-2.0-flash" in model_ids
 
     def test_register_all_models(self):
         register_all_models()
-        
+
         providers = get_providers()
         assert "openai" in providers
         assert "anthropic" in providers
@@ -162,7 +162,7 @@ class TestCalculateCost:
             context_window=1000,
             max_tokens=100,
         )
-        
+
         usage = Usage(
             input=500000,
             output=100000,
@@ -171,9 +171,9 @@ class TestCalculateCost:
             total_tokens=900000,
             cost=UsageCost(),
         )
-        
+
         cost = calculate_cost(model, usage)
-        
+
         assert cost.input == pytest.approx(1.0, rel=1e-6)
         assert cost.output == pytest.approx(0.6, rel=1e-6)
         assert cost.cache_read == pytest.approx(0.1, rel=1e-6)
@@ -207,7 +207,7 @@ class TestModelsAreEqual:
             context_window=1000,
             max_tokens=100,
         )
-        
+
         assert models_are_equal(model1, model2) is True
 
     def test_different_models(self):
@@ -235,7 +235,7 @@ class TestModelsAreEqual:
             context_window=1000,
             max_tokens=100,
         )
-        
+
         assert models_are_equal(model1, model2) is False
 
     def test_none_models(self):
@@ -251,7 +251,7 @@ class TestModelsAreEqual:
             context_window=1000,
             max_tokens=100,
         )
-        
+
         assert models_are_equal(None, model) is False
         assert models_are_equal(model, None) is False
         assert models_are_equal(None, None) is False

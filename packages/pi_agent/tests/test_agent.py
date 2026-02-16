@@ -1,9 +1,8 @@
-import pytest
 
 
 def test_agent_state_default():
     from pi_agent.types import AgentState
-    from pi_ai.types import Model, ModelCost, StopReason
+    from pi_ai.types import Model, ModelCost
 
     model = Model(
         id="test-model",
@@ -46,7 +45,7 @@ def test_agent_tool_result():
 
 
 def test_agent_events():
-    from pi_agent.types import AgentStartEvent, AgentEndEvent, TurnStartEvent
+    from pi_agent.types import AgentEndEvent, AgentStartEvent, TurnStartEvent
 
     start = AgentStartEvent()
     assert start.type == "agent_start"
@@ -60,7 +59,6 @@ def test_agent_events():
 
 
 def test_steering_queue_one_at_a_time():
-    from pi_agent.types import AgentToolResult, TextContent
 
     from pi_agent.agent import Agent
 

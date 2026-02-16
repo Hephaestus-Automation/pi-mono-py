@@ -2,37 +2,49 @@ from __future__ import annotations
 
 import asyncio
 import random
-from collections.abc import Callable, Awaitable
-from typing import Any
+from collections.abc import Awaitable
 from time import time
+from typing import Any, Callable
 
-from pi_ai.stream import stream_simple
-from pi_ai.types import Context as AiContext, Message, StopReason, Usage, UsageCost, ToolResultMessage, ToolCall, TextContent, AssistantMessage
 from pi_ai.event_stream import EventStream
+from pi_ai.stream import stream_simple
+from pi_ai.types import (
+    AssistantMessage,
+    StopReason,
+    TextContent,
+    ToolCall,
+    ToolResultMessage,
+    Usage,
+    UsageCost,
+)
+from pi_ai.types import (
+    Context as AiContext,
+)
 
 from .types import (
     AgentContext,
+    AgentEndEvent,
     AgentEvent,
     AgentLoopConfig,
     AgentMessage,
+    AgentStartEvent,
     AgentTool,
     AgentToolResult,
-    StreamFn,
-    AgentStartEvent,
-    AgentEndEvent,
-    TurnStartEvent,
-    TurnEndEvent,
+    MessageEndEvent,
     MessageStartEvent,
     MessageUpdateEvent,
-    MessageEndEvent,
+    StreamFn,
+    ToolExecutionEndEvent,
     ToolExecutionStartEvent,
     ToolExecutionUpdateEvent,
-    ToolExecutionEndEvent,
+    TurnEndEvent,
+    TurnStartEvent,
 )
 
 
 class RateLimitError(Exception):
     """Raised when API rate limit is hit."""
+
     def __init__(self, retry_after_ms: int | None = None):
         self.retry_after_ms = retry_after_ms
         super().__init__(f"Rate limit hit, retry after {retry_after_ms}ms")
@@ -40,11 +52,13 @@ class RateLimitError(Exception):
 
 class LLMTimeoutError(Exception):
     """Raised when LLM call times out."""
+
     pass
 
 
 class ToolTimeoutError(Exception):
     """Raised when tool execution times out."""
+
     def __init__(self, tool_name: str, timeout_ms: int):
         self.tool_name = tool_name
         self.timeout_ms = timeout_ms
@@ -127,7 +141,7 @@ async def _run_loop(
     stream_fn: StreamFn | None,
 ) -> None:
     first_turn = True
-    pending_messages = (await config.get_steering_messages() if config.get_steering_messages else [])
+    pending_messages = await config.get_steering_messages() if config.get_steering_messages else []
 
     while True:
         has_more_tool_calls = True
@@ -258,14 +272,14 @@ async def _stream_assistant_response(
             if config.llm_timeout_ms:
                 response = await asyncio.wait_for(
                     stream_function(config.model, llm_context, options),
-                    timeout=config.llm_timeout_ms / 1000
+                    timeout=config.llm_timeout_ms / 1000,
                 )
             else:
                 response = await stream_function(config.model, llm_context, options)
 
             return await _process_llm_response(response, context, stream)
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             last_error = LLMTimeoutError(f"LLM call timed out after {config.llm_timeout_ms}ms")
             if attempt < max_retries:
                 await _exponential_backoff(attempt, retry_delay_ms, cancel_event)
@@ -294,19 +308,18 @@ async def _process_llm_response(
     added_partial = False
 
     from pi_ai.types import (
-        AssistantMessageEvent,
-        StartEvent,
-        TextStartEvent,
-        TextDeltaEvent,
-        TextEndEvent,
-        ThinkingStartEvent,
-        ThinkingDeltaEvent,
-        ThinkingEndEvent,
-        ToolcallStartEvent,
-        ToolcallDeltaEvent,
-        ToolcallEndEvent,
         DoneEvent,
         ErrorEvent,
+        StartEvent,
+        TextDeltaEvent,
+        TextEndEvent,
+        TextStartEvent,
+        ThinkingDeltaEvent,
+        ThinkingEndEvent,
+        ThinkingStartEvent,
+        ToolcallDeltaEvent,
+        ToolcallEndEvent,
+        ToolcallStartEvent,
     )
 
     async for event in response:
@@ -358,9 +371,7 @@ async def _execute_tool_calls(
     assistant_message: AssistantMessage,
     cancel_event: asyncio.Event | None,
     stream: EventStream[AgentEvent, list[AgentMessage]],
-    get_steering_messages: (
-        Callable[[], Awaitable[list[AgentMessage]]] | None
-    ) = None,
+    get_steering_messages: (Callable[[], Awaitable[list[AgentMessage]]] | None) = None,
     tool_timeout_ms: int | None = None,
 ) -> dict[str, Any]:
     tool_calls = [c for c in assistant_message.content if isinstance(c, ToolCall)]
@@ -408,21 +419,28 @@ async def _execute_tool_calls(
             if tool_timeout_ms:
                 result = await asyncio.wait_for(
                     tool.execute(tool_call.id, tool_call.arguments, cancel_event, on_update),
-                    timeout=tool_timeout_ms / 1000
+                    timeout=tool_timeout_ms / 1000,
                 )
             else:
                 result = await tool.execute(
                     tool_call.id, tool_call.arguments, cancel_event, on_update
                 )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             from .types import AgentToolResult
+
             result = AgentToolResult(
-                content=[TextContent(type="text", text=f"Tool '{tool_call.name}' timed out after {tool_timeout_ms}ms")],
+                content=[
+                    TextContent(
+                        type="text",
+                        text=f"Tool '{tool_call.name}' timed out after {tool_timeout_ms}ms",
+                    )
+                ],
                 details={"timeout_ms": tool_timeout_ms},
             )
             is_error = True
         except asyncio.CancelledError:
             from .types import AgentToolResult
+
             result = AgentToolResult(
                 content=[TextContent(type="text", text="Tool execution was cancelled")],
                 details={"cancelled": True},
@@ -431,9 +449,7 @@ async def _execute_tool_calls(
         except Exception as e:
             from .types import AgentToolResult
 
-            result = AgentToolResult(
-                content=[TextContent(type="text", text=str(e))], details={}
-            )
+            result = AgentToolResult(content=[TextContent(type="text", text=str(e))], details={})
             is_error = True
 
         stream.push(
@@ -518,13 +534,13 @@ async def _exponential_backoff(
     cancel_event: asyncio.Event | None = None,
 ) -> None:
     """Wait with exponential backoff before retry."""
-    delay_ms = base_delay_ms * (2 ** attempt) + random.randint(0, 1000)
+    delay_ms = base_delay_ms * (2**attempt) + random.randint(0, 1000)
     delay_s = delay_ms / 1000
 
     if cancel_event:
         try:
             await asyncio.wait_for(cancel_event.wait(), timeout=delay_s)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass  # Cancel not triggered, continue with retry
     else:
         await asyncio.sleep(delay_s)

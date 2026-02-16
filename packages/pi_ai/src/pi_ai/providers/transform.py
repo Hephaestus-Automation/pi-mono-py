@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 
 from ..types import (
-    Api,
     AssistantMessage,
     Message,
     Model,
     ToolCall,
-    ToolResultMessage,
 )
 
 
@@ -26,9 +23,7 @@ def transform_messages(
 
     first_pass = []
     for msg in messages:
-        if msg.role == "user":
-            first_pass.append(msg)
-        elif msg.role == "toolResult":
+        if msg.role == "user" or msg.role == "toolResult":
             first_pass.append(msg)
         elif msg.role == "assistant":
             transformed_content = []
@@ -45,17 +40,25 @@ def transform_messages(
                         transformed_content.append({"type": "text", "text": block.thinking})
                 elif block.type == "toolCall":
                     normalized_id = normalize_tool_call_id(block.id, model, assistant_msg)
-                    block_dict = block.model_dump() if hasattr(block, 'model_dump') else dict(block)
-                    transformed_content.append({
-                        **{k: v for k, v in block_dict.items() if k != "id"},
-                        "id": normalized_id,
-                    })
+                    block_dict = block.model_dump() if hasattr(block, "model_dump") else dict(block)
+                    transformed_content.append(
+                        {
+                            **{k: v for k, v in block_dict.items() if k != "id"},
+                            "id": normalized_id,
+                        }
+                    )
 
-            msg_dict = assistant_msg.model_dump() if hasattr(assistant_msg, 'model_dump') else dict(assistant_msg)
-            first_pass.append({
-                **{k: v for k, v in msg_dict.items() if k != "content"},
-                "content": transformed_content,
-            })
+            msg_dict = (
+                assistant_msg.model_dump()
+                if hasattr(assistant_msg, "model_dump")
+                else dict(assistant_msg)
+            )
+            first_pass.append(
+                {
+                    **{k: v for k, v in msg_dict.items() if k != "content"},
+                    "content": transformed_content,
+                }
+            )
 
     second_pass = []
     pending_tool_calls = []
@@ -154,27 +157,31 @@ def transform_messages(
         if msg.role == "assistant":
             transformed_content = []
             for block in msg.content:
-                if block.type == "text":
-                    transformed_content.append(block)
-                elif block.type == "thinking":
+                if block.type == "text" or block.type == "thinking":
                     transformed_content.append(block)
                 elif block.type == "toolCall":
                     original_id = block.id
                     normalized_id = tool_call_id_map.get(original_id, original_id)
                     if normalized_id != original_id:
-                        block_dict = block.model_dump() if hasattr(block, 'model_dump') else dict(block)
-                        transformed_content.append({
-                            **{k: v for k, v in block_dict.items() if k != "id"},
-                            "id": normalized_id,
-                        })
+                        block_dict = (
+                            block.model_dump() if hasattr(block, "model_dump") else dict(block)
+                        )
+                        transformed_content.append(
+                            {
+                                **{k: v for k, v in block_dict.items() if k != "id"},
+                                "id": normalized_id,
+                            }
+                        )
                     else:
                         transformed_content.append(block)
 
-            msg_dict = msg.model_dump() if hasattr(msg, 'model_dump') else dict(msg)
-            result.append({
-                **{k: v for k, v in msg_dict.items() if k != "content"},
-                "content": transformed_content,
-            })
+            msg_dict = msg.model_dump() if hasattr(msg, "model_dump") else dict(msg)
+            result.append(
+                {
+                    **{k: v for k, v in msg_dict.items() if k != "content"},
+                    "content": transformed_content,
+                }
+            )
         else:
             result.append(msg)
 

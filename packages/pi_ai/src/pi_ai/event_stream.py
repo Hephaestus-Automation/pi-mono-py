@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Callable, Generic, TypeVar
+from collections.abc import Callable
+from typing import Generic, TypeVar
 
 from .types import AssistantMessage, AssistantMessageEvent
 

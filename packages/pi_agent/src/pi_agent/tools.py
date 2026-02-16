@@ -1,20 +1,23 @@
 """Tool utilities for pi-agent: validation, built-in tools."""
+
 from __future__ import annotations
 
 import asyncio
-import json
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 try:
     import jsonschema
-    from jsonschema import validate, ValidationError as JsonSchemaValidationError
+    from jsonschema import ValidationError as JsonSchemaValidationError
+    from jsonschema import validate
+
     _has_jsonschema = True
 except ImportError:
     _has_jsonschema = False
     JsonSchemaValidationError = Exception  # type: ignore[misc,assignment]
 
-from .types import AgentTool, AgentToolResult, AgentToolUpdateCallback
 from pi_ai.types import TextContent
+
+from .types import AgentTool, AgentToolResult, AgentToolUpdateCallback
 
 # Expose the flag for external use
 HAS_JSONSCHEMA = _has_jsonschema
@@ -22,6 +25,7 @@ HAS_JSONSCHEMA = _has_jsonschema
 
 class ToolValidationError(Exception):
     """Raised when tool parameter validation fails."""
+
     def __init__(self, tool_name: str, errors: list[str]):
         self.tool_name = tool_name
         self.errors = errors
@@ -34,21 +38,21 @@ def validate_tool_params(
 ) -> list[str]:
     """
     Validate parameters against a JSON Schema.
-    
+
     Returns a list of validation errors (empty if valid).
     """
     if not _has_jsonschema:
         return []
-    
+
     # Import is available here since _has_jsonschema is True
     from jsonschema import validate  # type: ignore[import-untyped]
-    
+
     errors = []
     try:
         validate(instance=params, schema=schema)
     except JsonSchemaValidationError as e:
         errors.append(str(e))
-    
+
     return errors
 
 
@@ -58,12 +62,12 @@ def validate_tool_call(
 ) -> list[str]:
     """
     Validate tool call arguments against the tool's parameter schema.
-    
+
     Returns a list of validation errors (empty if valid).
     """
     if not tool.parameters:
         return []
-    
+
     return validate_tool_params(tool.parameters, args)
 
 
@@ -76,17 +80,18 @@ def create_tool(
 ) -> AgentTool:
     """
     Create an AgentTool with automatic parameter validation.
-    
+
     Args:
         name: Tool name
         description: Tool description
         parameters: JSON Schema for parameters
         execute_fn: Async function(tool_call_id, args, cancel_event, on_update) -> AgentToolResult
         label: Human-readable label
-    
+
     Returns:
         AgentTool instance
     """
+
     async def validated_execute(
         tool_call_id: str,
         args: dict[str, Any],
@@ -98,12 +103,16 @@ def create_tool(
             errors = validate_tool_params(parameters, args)
             if errors:
                 return AgentToolResult(
-                    content=[TextContent(type="text", text=f"Parameter validation failed: {', '.join(errors)}")],
+                    content=[
+                        TextContent(
+                            type="text", text=f"Parameter validation failed: {', '.join(errors)}"
+                        )
+                    ],
                     details={"validation_errors": errors},
                 )
-        
+
         return await execute_fn(tool_call_id, args, cancel_event, on_update)
-    
+
     return AgentTool(
         name=name,
         description=description,
@@ -126,11 +135,11 @@ async def _execute_read_file(
 ) -> AgentToolResult:
     """Execute read_file tool."""
     file_path = args.get("file_path", "")
-    
+
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
-        
+
         return AgentToolResult(
             content=[TextContent(type="text", text=content)],
             details={"file_path": file_path, "size": len(content)},
@@ -156,13 +165,17 @@ async def _execute_write_file(
     """Execute write_file tool."""
     file_path = args.get("file_path", "")
     content = args.get("content", "")
-    
+
     try:
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(content)
-        
+
         return AgentToolResult(
-            content=[TextContent(type="text", text=f"Successfully wrote {len(content)} bytes to {file_path}")],
+            content=[
+                TextContent(
+                    type="text", text=f"Successfully wrote {len(content)} bytes to {file_path}"
+                )
+            ],
             details={"file_path": file_path, "bytes_written": len(content)},
         )
     except Exception as e:
@@ -179,12 +192,11 @@ async def _execute_bash(
     on_update: AgentToolUpdateCallback | None,
 ) -> AgentToolResult:
     """Execute bash tool."""
-    import subprocess
-    
+
     command = args.get("command", "")
     timeout = args.get("timeout", 60)
-    cwd = args.get("cwd", None)
-    
+    cwd = args.get("cwd")
+
     try:
         process = await asyncio.create_subprocess_shell(
             command,
@@ -192,26 +204,23 @@ async def _execute_bash(
             stderr=asyncio.subprocess.PIPE,
             cwd=cwd,
         )
-        
+
         try:
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=timeout
-            )
-        except asyncio.TimeoutError:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
+        except TimeoutError:
             process.kill()
             return AgentToolResult(
                 content=[TextContent(type="text", text=f"Command timed out after {timeout}s")],
                 details={"error": "timeout", "timeout": timeout},
             )
-        
+
         output = stdout.decode("utf-8", errors="replace")
         error_output = stderr.decode("utf-8", errors="replace")
-        
+
         result_text = output
         if error_output:
             result_text += f"\n[stderr]\n{error_output}"
-        
+
         return AgentToolResult(
             content=[TextContent(type="text", text=result_text)],
             details={
@@ -234,28 +243,27 @@ async def _execute_grep(
     on_update: AgentToolUpdateCallback | None,
 ) -> AgentToolResult:
     """Execute grep tool."""
-    import subprocess
-    
+
     pattern = args.get("pattern", "")
     path = args.get("path", ".")
     ignore_case = args.get("ignore_case", False)
-    
+
     cmd = ["grep", "-r", "-n"]
     if ignore_case:
         cmd.append("-i")
     cmd.extend([pattern, path])
-    
+
     try:
         process = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        
+
         stdout, stderr = await process.communicate()
-        
+
         output = stdout.decode("utf-8", errors="replace")
-        
+
         return AgentToolResult(
             content=[TextContent(type="text", text=output or "No matches found")],
             details={"pattern": pattern, "path": path, "exit_code": process.returncode},
@@ -403,7 +411,7 @@ async def _execute_edit_file(
     on_update: AgentToolUpdateCallback | None,
 ) -> AgentToolResult:
     """Execute edit_file tool.
-    
+
     Performs a precise string replacement in a file.
     The old_string must exist exactly as provided for the edit to succeed.
     """
@@ -411,38 +419,40 @@ async def _execute_edit_file(
     old_string = args.get("old_string", "")
     new_string = args.get("new_string", "")
     replace_all = args.get("replace_all", False)
-    
+
     # Validate required parameters
     if not file_path:
         return AgentToolResult(
             content=[TextContent(type="text", text="Error: file_path is required")],
             details={"error": "missing_file_path"},
         )
-    
+
     if not old_string:
         return AgentToolResult(
             content=[TextContent(type="text", text="Error: old_string is required")],
             details={"error": "missing_old_string"},
         )
-    
+
     try:
         # Read the file
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
-        
+
         # Count occurrences
         occurrences = content.count(old_string)
-        
+
         if occurrences == 0:
             return AgentToolResult(
-                content=[TextContent(type="text", text=f"Error: old_string not found in {file_path}")],
+                content=[
+                    TextContent(type="text", text=f"Error: old_string not found in {file_path}")
+                ],
                 details={
                     "error": "old_string_not_found",
                     "file_path": file_path,
                     "old_string_length": len(old_string),
                 },
             )
-        
+
         # Perform replacement
         if replace_all:
             new_content = content.replace(old_string, new_string)
@@ -450,7 +460,12 @@ async def _execute_edit_file(
         else:
             if occurrences > 1:
                 return AgentToolResult(
-                    content=[TextContent(type="text", text=f"Error: old_string found {occurrences} times in {file_path}. Use replace_all=true to replace all occurrences, or provide a more specific old_string.")],
+                    content=[
+                        TextContent(
+                            type="text",
+                            text=f"Error: old_string found {occurrences} times in {file_path}. Use replace_all=true to replace all occurrences, or provide a more specific old_string.",
+                        )
+                    ],
                     details={
                         "error": "multiple_matches",
                         "file_path": file_path,
@@ -459,13 +474,18 @@ async def _execute_edit_file(
                 )
             new_content = content.replace(old_string, new_string, 1)
             replacements = 1
-        
+
         # Write back
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(new_content)
-        
+
         return AgentToolResult(
-            content=[TextContent(type="text", text=f"Successfully edited {file_path}: replaced {replacements} occurrence(s)")],
+            content=[
+                TextContent(
+                    type="text",
+                    text=f"Successfully edited {file_path}: replaced {replacements} occurrence(s)",
+                )
+            ],
             details={
                 "file_path": file_path,
                 "replacements": replacements,
@@ -473,7 +493,7 @@ async def _execute_edit_file(
                 "new_length": len(new_string),
             },
         )
-    
+
     except FileNotFoundError:
         return AgentToolResult(
             content=[TextContent(type="text", text=f"Error: File not found: {file_path}")],

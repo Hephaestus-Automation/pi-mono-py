@@ -1,10 +1,14 @@
 """OpenRouter provider - OpenAI-compatible API for multiple models."""
+
 from __future__ import annotations
 
 import asyncio
 import json
 from typing import Any, cast
 
+from ..env_keys import get_env_api_key
+from ..event_stream import AssistantMessageEventStream
+from ..models import calculate_cost
 from ..types import (
     AssistantMessage,
     Context,
@@ -12,22 +16,17 @@ from ..types import (
     ErrorEvent,
     Model,
     StartEvent,
-    StreamOptions,
     StopReason,
+    StreamOptions,
     TextContent,
     TextDeltaEvent,
     ThinkingContent,
     ThinkingDeltaEvent,
-    Tool,
     ToolCall,
-    ToolcallDeltaEvent,
     ToolcallEndEvent,
     Usage,
     UsageCost,
 )
-from ..event_stream import AssistantMessageEventStream
-from ..env_keys import get_env_api_key
-from ..models import calculate_cost
 
 try:
     import httpx
@@ -40,7 +39,7 @@ def normalize_tool_id(tool_id: str) -> str:
     normalized = "".join(c for c in tool_id if c.isalnum())
     if len(normalized) < 9:
         padding = "ABCDEFGHI"
-        normalized = normalized + padding[0: 9 - len(normalized)]
+        normalized = normalized + padding[0 : 9 - len(normalized)]
     elif len(normalized) > 9:
         normalized = normalized[0:9]
     return normalized
@@ -74,12 +73,16 @@ def stream_openrouter(
         )
 
         try:
-            api_key = options.api_key if options and options.api_key else get_env_api_key(model.provider)
+            api_key = (
+                options.api_key if options and options.api_key else get_env_api_key(model.provider)
+            )
             if not api_key:
                 raise ValueError(f"No API key for provider: {model.provider}")
 
             if httpx is None:
-                raise ImportError("httpx is required for OpenRouter provider. Install with: pip install httpx")
+                raise ImportError(
+                    "httpx is required for OpenRouter provider. Install with: pip install httpx"
+                )
 
             params = _build_params(model, context, options)
 
@@ -101,112 +104,115 @@ def stream_openrouter(
                 base_url=model.base_url,
                 headers=headers,
                 timeout=120.0,
-            ) as client:
-                async with client.stream("POST", "/chat/completions", json=params) as response:
-                    async for line in response.aiter_lines():
-                        if not line.strip() or not line.startswith("data: "):
-                            continue
+            ) as client, client.stream("POST", "/chat/completions", json=params) as response:
+                async for line in response.aiter_lines():
+                    if not line.strip() or not line.startswith("data: "):
+                        continue
 
-                        data_str = line[6:]
-                        if data_str == "[DONE]":
-                            break
+                    data_str = line[6:]
+                    if data_str == "[DONE]":
+                        break
 
-                        try:
-                            data = json.loads(data_str)
-                        except json.JSONDecodeError:
-                            continue
+                    try:
+                        data = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        continue
 
-                        if "choices" not in data or len(data["choices"]) == 0:
-                            continue
+                    if "choices" not in data or len(data["choices"]) == 0:
+                        continue
 
-                        choice = data["choices"][0]
-                        delta = choice.get("delta", {})
+                    choice = data["choices"][0]
+                    delta = choice.get("delta", {})
 
-                        if choice.get("finish_reason"):
-                            output.stop_reason = cast(StopReason, _map_finish_reason(choice["finish_reason"]))
+                    if choice.get("finish_reason"):
+                        output.stop_reason = cast(
+                            "StopReason", _map_finish_reason(choice["finish_reason"])
+                        )
 
-                        if "usage" in data:
-                            usage_data = data["usage"]
-                            output.usage = Usage(
-                                input=usage_data.get("prompt_tokens", 0),
-                                output=usage_data.get("completion_tokens", 0),
-                                cacheRead=0,
-                                cacheWrite=0,
-                                totalTokens=usage_data.get("total_tokens", 0),
-                                cost=calculate_cost(model, output.usage),
+                    if "usage" in data:
+                        usage_data = data["usage"]
+                        output.usage = Usage(
+                            input=usage_data.get("prompt_tokens", 0),
+                            output=usage_data.get("completion_tokens", 0),
+                            cacheRead=0,
+                            cacheWrite=0,
+                            totalTokens=usage_data.get("total_tokens", 0),
+                            cost=calculate_cost(model, output.usage),
+                        )
+
+                    if delta.get("content"):
+                        content = delta["content"]
+                        if content:
+                            if not current_block or current_block.type != "text":
+                                current_block = TextContent(type="text", text="")
+                                output.content.append(current_block)
+                                block_index.append(len(output.content) - 1)
+
+                            current_block.text += content
+                            stream.push(
+                                TextDeltaEvent(
+                                    contentIndex=block_index[-1],
+                                    delta=content,
+                                    partial=output,
+                                )
                             )
 
-                        if delta.get("content"):
-                            content = delta["content"]
-                            if content:
-                                if not current_block or current_block.type != "text":
-                                    current_block = TextContent(type="text", text="")
-                                    output.content.append(current_block)
-                                    block_index.append(len(output.content) - 1)
-
-                                current_block.text += content
-                                stream.push(
-                                    TextDeltaEvent(
-                                        contentIndex=block_index[-1],
-                                        delta=content,
-                                        partial=output,
-                                    )
+                    # Some models support reasoning
+                    if delta.get("reasoning_content"):
+                        reasoning = delta["reasoning_content"]
+                        if reasoning:
+                            if not current_block or current_block.type != "thinking":
+                                current_block = ThinkingContent(
+                                    type="thinking", thinking="", thinking_signature=None
                                 )
+                                output.content.append(current_block)
+                                block_index.append(len(output.content) - 1)
 
-                        # Some models support reasoning
-                        if delta.get("reasoning_content"):
-                            reasoning = delta["reasoning_content"]
-                            if reasoning:
-                                if not current_block or current_block.type != "thinking":
-                                    current_block = ThinkingContent(type="thinking", thinking="", thinking_signature=None)
-                                    output.content.append(current_block)
-                                    block_index.append(len(output.content) - 1)
-
-                                current_block.thinking += reasoning
-                                stream.push(
-                                    ThinkingDeltaEvent(
-                                        contentIndex=block_index[-1],
-                                        delta=reasoning,
-                                        partial=output,
-                                    )
+                            current_block.thinking += reasoning
+                            stream.push(
+                                ThinkingDeltaEvent(
+                                    contentIndex=block_index[-1],
+                                    delta=reasoning,
+                                    partial=output,
                                 )
+                            )
 
-                        if delta.get("tool_calls"):
-                            for tool_delta in delta["tool_calls"]:
-                                if not current_block or current_block.type != "toolCall":
-                                    current_block = ToolCall(
-                                        type="toolCall",
-                                        id="",
-                                        name="",
-                                        arguments={},
-                                        thoughtSignature=None,
-                                    )
-                                    output.content.append(current_block)
-                                    block_index.append(len(output.content) - 1)
-
-                                if "id" in tool_delta:
-                                    current_block.id = normalize_tool_id(tool_delta["id"])
-                                if "function" in tool_delta:
-                                    func = tool_delta["function"]
-                                    if "name" in func:
-                                        current_block.name = func["name"]
-                                    if "arguments" in func:
-                                        args_str = func["arguments"]
-                                        if isinstance(args_str, str):
-                                            try:
-                                                current_block.arguments = json.loads(args_str)
-                                            except json.JSONDecodeError:
-                                                pass
-                                        elif isinstance(args_str, dict):
-                                            current_block.arguments = args_str
-
-                                stream.push(
-                                    ToolcallEndEvent(
-                                        contentIndex=block_index[-1],
-                                        toolCall=current_block,
-                                        partial=output,
-                                    )
+                    if delta.get("tool_calls"):
+                        for tool_delta in delta["tool_calls"]:
+                            if not current_block or current_block.type != "toolCall":
+                                current_block = ToolCall(
+                                    type="toolCall",
+                                    id="",
+                                    name="",
+                                    arguments={},
+                                    thoughtSignature=None,
                                 )
+                                output.content.append(current_block)
+                                block_index.append(len(output.content) - 1)
+
+                            if "id" in tool_delta:
+                                current_block.id = normalize_tool_id(tool_delta["id"])
+                            if "function" in tool_delta:
+                                func = tool_delta["function"]
+                                if "name" in func:
+                                    current_block.name = func["name"]
+                                if "arguments" in func:
+                                    args_str = func["arguments"]
+                                    if isinstance(args_str, str):
+                                        try:
+                                            current_block.arguments = json.loads(args_str)
+                                        except json.JSONDecodeError:
+                                            pass
+                                    elif isinstance(args_str, dict):
+                                        current_block.arguments = args_str
+
+                            stream.push(
+                                ToolcallEndEvent(
+                                    contentIndex=block_index[-1],
+                                    toolCall=current_block,
+                                    partial=output,
+                                )
+                            )
 
             stream.push(DoneEvent(reason=output.stop_reason, message=output))
 
@@ -246,13 +252,17 @@ def _build_params(
         if msg.role == "user":
             messages.append({"role": "user", "content": _format_user_content(msg.content)})
         elif msg.role == "assistant":
-            messages.append({"role": "assistant", "content": _format_assistant_content(msg.content)})
+            messages.append(
+                {"role": "assistant", "content": _format_assistant_content(msg.content)}
+            )
         elif msg.role == "toolResult":
-            messages.append({
-                "role": "tool",
-                "tool_call_id": msg.tool_call_id,
-                "content": _format_tool_content(msg.content),
-            })
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": msg.tool_call_id,
+                    "content": _format_tool_content(msg.content),
+                }
+            )
 
     params: dict[str, Any] = {
         "model": model.id,
@@ -261,19 +271,23 @@ def _build_params(
     }
 
     if context.system_prompt:
-        params["messages"] = [{"role": "system", "content": context.system_prompt}] + params["messages"]
+        params["messages"] = [{"role": "system", "content": context.system_prompt}] + params[
+            "messages"
+        ]
 
     if context.tools:
         tools = []
         for tool in context.tools:
-            tools.append({
-                "type": "function",
-                "function": {
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": tool.parameters,
-                },
-            })
+            tools.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.parameters,
+                    },
+                }
+            )
         params["tools"] = tools
 
     if options:
@@ -293,10 +307,12 @@ def _format_user_content(content) -> str | list[dict[str, Any]]:
         if c.type == "text":
             result.append({"type": "text", "text": c.text})
         elif c.type == "image":
-            result.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:{c.mime_type};base64,{c.data}"},
-            })
+            result.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{c.mime_type};base64,{c.data}"},
+                }
+            )
     return result
 
 
@@ -306,19 +322,23 @@ def _format_assistant_content(content: list) -> str | list[dict[str, Any]]:
         if block.type == "text":
             result.append({"type": "text", "text": block.text})
         elif block.type == "thinking":
-            result.append({
-                "type": "text",
-                "text": f"<thinking>{block.thinking}</thinking>",
-            })
+            result.append(
+                {
+                    "type": "text",
+                    "text": f"<thinking>{block.thinking}</thinking>",
+                }
+            )
         elif block.type == "toolCall":
-            result.append({
-                "type": "function",
-                "id": block.id,
-                "function": {
-                    "name": block.name,
-                    "arguments": json.dumps(block.arguments),
-                },
-            })
+            result.append(
+                {
+                    "type": "function",
+                    "id": block.id,
+                    "function": {
+                        "name": block.name,
+                        "arguments": json.dumps(block.arguments),
+                    },
+                }
+            )
     return result if len(result) > 1 else (result[0] if result else "")
 
 

@@ -3,17 +3,17 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from ..types import Api, ApiProvider, Context, Model, SimpleStreamOptions, StreamOptions
 from ..event_stream import AssistantMessageEventStream
-from .openai import stream_openai_completions
+from ..types import Api, ApiProvider, Context, Model, SimpleStreamOptions, StreamOptions
 from .anthropic import stream_anthropic_messages
-from .google import stream_google
-from .zhipu import stream_zhipu
-from .mistral import stream_mistral
-from .xai import stream_xai
-from .openrouter import stream_openrouter
 from .azure_openai import stream_azure_openai
+from .google import stream_google
+from .mistral import stream_mistral
+from .openai import stream_openai_completions
+from .openrouter import stream_openrouter
 from .transform import transform_messages
+from .xai import stream_xai
+from .zhipu import stream_zhipu
 
 StreamFunction = Callable[
     [Model, Context, StreamOptions | None],
@@ -50,6 +50,7 @@ def unregister_api_providers(source_id: str) -> None:
 def clear_api_providers() -> None:
     global _registry
     _registry.clear()
+
 
 register_api_provider(
     ApiProvider(

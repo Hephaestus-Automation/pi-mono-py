@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-
 _PROVIDER_ENV_MAP: dict[str, str] = {
     "openai": "OPENAI_API_KEY",
     "azure-openai-responses": "AZURE_OPENAI_API_KEY",

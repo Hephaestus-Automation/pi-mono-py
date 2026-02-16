@@ -2,7 +2,7 @@ import pytest
 
 
 def test_user_message_creation():
-    from pi_ai.types import UserMessage, TextContent
+    from pi_ai.types import TextContent, UserMessage
 
     msg = UserMessage(
         role="user",
@@ -14,8 +14,8 @@ def test_user_message_creation():
 
 
 def test_model_cost_calculation():
-    from pi_ai.types import Model, ModelCost, Usage, UsageCost, StopReason
     from pi_ai.models import calculate_cost
+    from pi_ai.types import Model, ModelCost, Usage, UsageCost
 
     model = Model(
         id="test-model",
@@ -47,16 +47,18 @@ def test_model_cost_calculation():
 
 
 def test_env_api_key():
-    from pi_ai.env_keys import get_env_api_key
     import os
+
+    from pi_ai.env_keys import get_env_api_key
 
     result = get_env_api_key("openai")
     assert result is None or result == os.environ.get("OPENAI_API_KEY")
 
 
 def test_event_stream_basic():
-    from pi_ai.event_stream import EventStream
     import asyncio
+
+    from pi_ai.event_stream import EventStream
 
     async def test():
         stream = EventStream[int, list[int]](
@@ -79,15 +81,15 @@ def test_event_stream_basic():
 
 
 def test_message_serialization():
+
     from pi_ai.types import (
-        UserMessage,
         AssistantMessage,
-        ToolResultMessage,
-        TextContent,
         ImageContent,
+        TextContent,
         ToolCall,
+        ToolResultMessage,
+        UserMessage,
     )
-    import json
 
     user_msg = UserMessage(
         role="user",
@@ -122,7 +124,14 @@ def test_message_serialization():
         api="anthropic",
         provider="anthropic",
         model="claude-3-5-sonnet",
-        usage={"input": 100, "output": 50, "cache_read": 0, "cache_write": 0, "total_tokens": 150, "cost": {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0, "total": 0}},
+        usage={
+            "input": 100,
+            "output": 50,
+            "cache_read": 0,
+            "cache_write": 0,
+            "total_tokens": 150,
+            "cost": {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0, "total": 0},
+        },
         timestamp=1234567891,
         stop_reason="toolUse",
     )
@@ -152,7 +161,7 @@ def test_message_serialization():
 
 
 def test_json_schema_generation():
-    from pi_ai.types import UserMessage, AssistantMessage, ToolResultMessage, TextContent
+    from pi_ai.types import AssistantMessage, TextContent, ToolResultMessage, UserMessage
 
     user_schema = UserMessage.model_json_schema()
     assert "role" in user_schema["properties"]
@@ -175,14 +184,14 @@ def test_json_schema_generation():
 
 
 def test_content_type_validation():
-    from pi_ai.types import (
-        TextContent,
-        ImageContent,
-        ToolCall,
-        ThinkingContent,
-    )
     import pydantic
     import pytest
+    from pi_ai.types import (
+        ImageContent,
+        TextContent,
+        ThinkingContent,
+        ToolCall,
+    )
 
     text = TextContent(type="text", text="Hello world")
     assert text.type == "text"
@@ -225,12 +234,12 @@ def test_content_type_validation():
 
 def test_union_type_discrimination():
     from pi_ai.types import (
-        UserContent,
         AssistantContent,
-        TextContent,
         ImageContent,
-        ToolCall,
+        TextContent,
         ThinkingContent,
+        ToolCall,
+        UserContent,
     )
 
     text = TextContent(type="text", text="Hello")

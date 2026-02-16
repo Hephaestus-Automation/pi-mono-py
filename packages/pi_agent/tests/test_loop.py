@@ -1,18 +1,17 @@
 """Tests for agent_loop and related types."""
-import pytest
-import asyncio
+
 from time import time
 
+import pytest
+from pi_agent.loop import agent_loop_continue
+from pi_agent.types import AgentContext, AgentLoopConfig, AgentTool, AgentToolResult
 from pi_ai.types import (
     AssistantMessage,
     Model,
     ModelCost,
     TextContent,
     Usage,
-    ToolCall,
 )
-from pi_agent.types import AgentContext, AgentLoopConfig, AgentTool, AgentToolResult
-from pi_agent.loop import agent_loop, agent_loop_continue
 
 
 def create_mock_model():
@@ -32,29 +31,29 @@ def create_mock_model():
 
 class TestAgentLoopConfig:
     """Tests for AgentLoopConfig."""
-    
+
     def test_config_defaults(self):
         """Test AgentLoopConfig default values."""
         model = create_mock_model()
-        
+
         config = AgentLoopConfig(
             model=model,
             convert_to_llm=lambda msgs: [],
         )
-        
+
         assert config.max_retries == 3
         assert config.retry_delay_ms == 1000
         assert config.retry_on_rate_limit is True
         assert config.tool_timeout_ms == 60000
         assert config.llm_timeout_ms == 120000
-    
+
     def test_config_custom_values(self):
         """Test AgentLoopConfig with custom values."""
         model = create_mock_model()
-        
+
         async def get_steering():
             return []
-        
+
         config = AgentLoopConfig(
             model=model,
             convert_to_llm=lambda msgs: [],
@@ -64,7 +63,7 @@ class TestAgentLoopConfig:
             llm_timeout_ms=60000,
             get_steering_messages=get_steering,
         )
-        
+
         assert config.max_retries == 5
         assert config.retry_delay_ms == 2000
         assert config.tool_timeout_ms == 30000
@@ -74,12 +73,12 @@ class TestAgentLoopConfig:
 
 class TestAgentLoopContinueValidation:
     """Tests for agent_loop_continue validation."""
-    
+
     @pytest.mark.asyncio
     async def test_continue_from_assistant_message_raises(self):
         """Test that continuing from an assistant message raises an error."""
         model = create_mock_model()
-        
+
         assistant_message = AssistantMessage(
             role="assistant",
             content=[TextContent(type="text", text="Previous response")],
@@ -90,53 +89,54 @@ class TestAgentLoopContinueValidation:
             stop_reason="stop",
             timestamp=int(time() * 1000),
         )
-        
+
         context = AgentContext(
             system_prompt="",
             messages=[assistant_message],
             tools=[],
         )
-        
+
         config = AgentLoopConfig(
             model=model,
             convert_to_llm=lambda msgs: [],
         )
-        
+
         with pytest.raises(ValueError, match="Cannot continue from message role: assistant"):
             agent_loop_continue(context, config)
-    
+
     @pytest.mark.asyncio
     async def test_continue_with_no_messages_raises(self):
         """Test that continuing with no messages raises an error."""
         model = create_mock_model()
-        
+
         context = AgentContext(
             system_prompt="",
             messages=[],
             tools=[],
         )
-        
+
         config = AgentLoopConfig(
             model=model,
             convert_to_llm=lambda msgs: [],
         )
-        
+
         with pytest.raises(ValueError, match="Cannot continue: no messages"):
             agent_loop_continue(context, config)
 
 
 class TestToolExecution:
     """Tests for tool execution logic."""
-    
+
     @pytest.mark.asyncio
     async def test_tool_execution_success(self):
         """Test successful tool execution."""
+
         async def mock_execute(tool_call_id, args, cancel_event, on_update):
             return AgentToolResult(
                 content=[TextContent(type="text", text="Tool result")],
                 details={},
             )
-        
+
         test_tool = AgentTool(
             name="test_tool",
             description="A test tool",
@@ -144,21 +144,22 @@ class TestToolExecution:
             label="Test Tool",
             execute=mock_execute,
         )
-        
+
         result = await test_tool.execute("call_123", {"arg1": "value"}, None, None)
-        
+
         assert result is not None
         assert result.content[0].text == "Tool result"
-    
+
     @pytest.mark.asyncio
     async def test_tool_execution_with_error(self):
         """Test tool execution that returns an error."""
+
         async def mock_execute(tool_call_id, args, cancel_event, on_update):
             return AgentToolResult(
                 content=[TextContent(type="text", text="Error: Something went wrong")],
                 details={"error": "execution_failed"},
             )
-        
+
         test_tool = AgentTool(
             name="error_tool",
             description="A tool that errors",
@@ -166,8 +167,8 @@ class TestToolExecution:
             label="Error Tool",
             execute=mock_execute,
         )
-        
+
         result = await test_tool.execute("call_456", {}, None, None)
-        
+
         assert result is not None
         assert "error" in result.details

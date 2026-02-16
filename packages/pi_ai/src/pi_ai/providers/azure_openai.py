@@ -1,10 +1,14 @@
 """Azure OpenAI provider - OpenAI-compatible API with Azure-specific auth."""
+
 from __future__ import annotations
 
 import asyncio
 import json
 from typing import Any, cast
 
+from ..env_keys import get_env_api_key
+from ..event_stream import AssistantMessageEventStream
+from ..models import calculate_cost
 from ..types import (
     AssistantMessage,
     Context,
@@ -12,22 +16,16 @@ from ..types import (
     ErrorEvent,
     Model,
     StartEvent,
-    StreamOptions,
     StopReason,
+    StreamOptions,
     TextContent,
     TextDeltaEvent,
     ThinkingContent,
-    ThinkingDeltaEvent,
-    Tool,
     ToolCall,
-    ToolcallDeltaEvent,
     ToolcallEndEvent,
     Usage,
     UsageCost,
 )
-from ..event_stream import AssistantMessageEventStream
-from ..env_keys import get_env_api_key
-from ..models import calculate_cost
 
 try:
     import httpx
@@ -43,7 +41,7 @@ def normalize_tool_id(tool_id: str) -> str:
     normalized = "".join(c for c in tool_id if c.isalnum())
     if len(normalized) < 9:
         padding = "ABCDEFGHI"
-        normalized = normalized + padding[0: 9 - len(normalized)]
+        normalized = normalized + padding[0 : 9 - len(normalized)]
     elif len(normalized) > 9:
         normalized = normalized[0:9]
     return normalized
@@ -55,10 +53,10 @@ def stream_azure_openai(
     options: StreamOptions | None = None,
 ) -> AssistantMessageEventStream:
     """Stream from Azure OpenAI API.
-    
+
     Azure OpenAI uses deployment-based URLs:
     https://{resource-name}.openai.azure.com/openai/deployments/{deployment-id}/chat/completions?api-version=xxx
-    
+
     The model.base_url should be: https://{resource-name}.openai.azure.com
     The model.id should be: {deployment-id}
     """
@@ -84,12 +82,16 @@ def stream_azure_openai(
         )
 
         try:
-            api_key = options.api_key if options and options.api_key else get_env_api_key(model.provider)
+            api_key = (
+                options.api_key if options and options.api_key else get_env_api_key(model.provider)
+            )
             if not api_key:
                 raise ValueError(f"No API key for provider: {model.provider}")
 
             if httpx is None:
-                raise ImportError("httpx is required for Azure OpenAI provider. Install with: pip install httpx")
+                raise ImportError(
+                    "httpx is required for Azure OpenAI provider. Install with: pip install httpx"
+                )
 
             params = _build_params(model, context, options)
 
@@ -129,7 +131,9 @@ def stream_azure_openai(
                         delta = choice.get("delta", {})
 
                         if choice.get("finish_reason"):
-                            output.stop_reason = cast(StopReason, _map_finish_reason(choice["finish_reason"]))
+                            output.stop_reason = cast(
+                                "StopReason", _map_finish_reason(choice["finish_reason"])
+                            )
 
                         if "usage" in data:
                             usage_data = data["usage"]
@@ -234,13 +238,17 @@ def _build_params(
         if msg.role == "user":
             messages.append({"role": "user", "content": _format_user_content(msg.content)})
         elif msg.role == "assistant":
-            messages.append({"role": "assistant", "content": _format_assistant_content(msg.content)})
+            messages.append(
+                {"role": "assistant", "content": _format_assistant_content(msg.content)}
+            )
         elif msg.role == "toolResult":
-            messages.append({
-                "role": "tool",
-                "tool_call_id": msg.tool_call_id,
-                "content": _format_tool_content(msg.content),
-            })
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": msg.tool_call_id,
+                    "content": _format_tool_content(msg.content),
+                }
+            )
 
     params: dict[str, Any] = {
         "messages": messages,
@@ -248,19 +256,23 @@ def _build_params(
     }
 
     if context.system_prompt:
-        params["messages"] = [{"role": "system", "content": context.system_prompt}] + params["messages"]
+        params["messages"] = [{"role": "system", "content": context.system_prompt}] + params[
+            "messages"
+        ]
 
     if context.tools:
         tools = []
         for tool in context.tools:
-            tools.append({
-                "type": "function",
-                "function": {
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": tool.parameters,
-                },
-            })
+            tools.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.parameters,
+                    },
+                }
+            )
         params["tools"] = tools
 
     if options:
@@ -280,10 +292,12 @@ def _format_user_content(content) -> str | list[dict[str, Any]]:
         if c.type == "text":
             result.append({"type": "text", "text": c.text})
         elif c.type == "image":
-            result.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:{c.mime_type};base64,{c.data}"},
-            })
+            result.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{c.mime_type};base64,{c.data}"},
+                }
+            )
     return result
 
 
@@ -293,19 +307,23 @@ def _format_assistant_content(content: list) -> str | list[dict[str, Any]]:
         if block.type == "text":
             result.append({"type": "text", "text": block.text})
         elif block.type == "thinking":
-            result.append({
-                "type": "text",
-                "text": f"<thinking>{block.thinking}</thinking>",
-            })
+            result.append(
+                {
+                    "type": "text",
+                    "text": f"<thinking>{block.thinking}</thinking>",
+                }
+            )
         elif block.type == "toolCall":
-            result.append({
-                "type": "function",
-                "id": block.id,
-                "function": {
-                    "name": block.name,
-                    "arguments": json.dumps(block.arguments),
-                },
-            })
+            result.append(
+                {
+                    "type": "function",
+                    "id": block.id,
+                    "function": {
+                        "name": block.name,
+                        "arguments": json.dumps(block.arguments),
+                    },
+                }
+            )
     return result if len(result) > 1 else (result[0] if result else "")
 
 

@@ -6,28 +6,27 @@ from .models import (
     get_model,
     get_models,
     get_providers,
-    register_model,
-    register_mistral_models,
-    register_xai_models,
-    register_openrouter_models,
     register_azure_openai_models,
+    register_mistral_models,
+    register_model,
+    register_openrouter_models,
+    register_xai_models,
 )
 from .providers import (
     ApiProvider,
     stream_anthropic_messages,
-    stream_google,
-    stream_openai_completions,
-    stream_mistral,
-    stream_xai,
-    stream_openrouter,
     stream_azure_openai,
+    stream_google,
+    stream_mistral,
+    stream_openai_completions,
+    stream_openrouter,
+    stream_xai,
 )
 from .providers.transform import transform_messages
 from .stream import complete, complete_simple, stream, stream_simple
-from .stream_proxy import stream_proxy, ProxyConfig
+from .stream_proxy import ProxyConfig, stream_proxy
 from .types import (
     Api,
-    ApiProvider as TypesApiProvider,
     AssistantMessage,
     AssistantMessageEvent,
     Context,
@@ -37,9 +36,9 @@ from .types import (
     Message,
     Model,
     ModelCost,
+    SimpleStreamOptions,
     StopReason,
     StreamOptions,
-    SimpleStreamOptions,
     TextContent,
     ThinkingContent,
     ThinkingLevel,
@@ -49,6 +48,9 @@ from .types import (
     ToolResultMessage,
     Usage,
     UsageCost,
+)
+from .types import (
+    ApiProvider as TypesApiProvider,
 )
 
 __all__ = [
@@ -100,4 +102,3 @@ __all__ = [
     "KnownProvider",
     "ThinkingLevel",
 ]
-

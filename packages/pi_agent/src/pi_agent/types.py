@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Callable, Literal, Union, Awaitable
+from collections.abc import Awaitable, Callable
+from typing import Any, Literal, Union
 
-from pydantic import BaseModel, ConfigDict, Field
-
+from pi_ai.event_stream import AssistantMessageEventStream
 from pi_ai.types import (
     AssistantMessageEvent,
-    AssistantMessage,
-    Context as AiContext,
     ImageContent,
     Message,
     Model,
@@ -17,7 +15,7 @@ from pi_ai.types import (
     Tool,
     ToolResultMessage,
 )
-from pi_ai.event_stream import AssistantMessageEventStream, EventStream
+from pydantic import BaseModel, ConfigDict, Field
 
 StreamFn = Callable[..., AssistantMessageEventStream | Awaitable[AssistantMessageEventStream]]
 
@@ -54,21 +52,21 @@ class AgentContext(BaseModel):
 class AgentLoopConfig(SimpleStreamOptions):
     model_config = ConfigDict(populate_by_name=True)
     model: Model
-    convert_to_llm: Callable[
-        [list[AgentMessage]], list[Message] | Awaitable[list[Message]]
-    ] = Field(alias="convertToLlm")
-    transform_context: Callable[
-        [list[AgentMessage], asyncio.Event | None], Awaitable[list[AgentMessage]]
-    ] | None = Field(default=None, alias="transformContext")
-    get_api_key: Callable[
-        [str], Awaitable[str | None] | str | None
-    ] | None = Field(default=None, alias="getApiKey")
-    get_steering_messages: Callable[
-        [], Awaitable[list[AgentMessage]]
-    ] | None = Field(default=None, alias="getSteeringMessages")
-    get_follow_up_messages: Callable[
-        [], Awaitable[list[AgentMessage]]
-    ] | None = Field(default=None, alias="getFollowUpMessages")
+    convert_to_llm: Callable[[list[AgentMessage]], list[Message] | Awaitable[list[Message]]] = (
+        Field(alias="convertToLlm")
+    )
+    transform_context: (
+        Callable[[list[AgentMessage], asyncio.Event | None], Awaitable[list[AgentMessage]]] | None
+    ) = Field(default=None, alias="transformContext")
+    get_api_key: Callable[[str], Awaitable[str | None] | str | None] | None = Field(
+        default=None, alias="getApiKey"
+    )
+    get_steering_messages: Callable[[], Awaitable[list[AgentMessage]]] | None = Field(
+        default=None, alias="getSteeringMessages"
+    )
+    get_follow_up_messages: Callable[[], Awaitable[list[AgentMessage]]] | None = Field(
+        default=None, alias="getFollowUpMessages"
+    )
     # Retry configuration
     max_retries: int = Field(default=3, alias="maxRetries")
     retry_delay_ms: int = Field(default=1000, alias="retryDelayMs")

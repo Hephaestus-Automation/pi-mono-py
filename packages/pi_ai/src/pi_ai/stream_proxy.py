@@ -1,18 +1,22 @@
 """Stream proxy for routing LLM requests through a proxy server."""
+
 from __future__ import annotations
 
 import asyncio
 import json
 from typing import Any, cast
 
+from .event_stream import AssistantMessageEventStream
+from .models import calculate_cost
 from .types import (
     AssistantMessage,
     Context,
     DoneEvent,
     ErrorEvent,
     Model,
-    StreamOptions,
+    StartEvent,
     StopReason,
+    StreamOptions,
     TextContent,
     TextDeltaEvent,
     ThinkingContent,
@@ -21,10 +25,7 @@ from .types import (
     ToolcallEndEvent,
     Usage,
     UsageCost,
-    StartEvent,
 )
-from .event_stream import AssistantMessageEventStream
-from .models import calculate_cost
 
 try:
     import httpx
@@ -34,7 +35,7 @@ except ImportError:
 
 class ProxyConfig:
     """Configuration for the proxy server."""
-    
+
     def __init__(
         self,
         proxy_url: str,
@@ -56,30 +57,30 @@ def stream_proxy(
     proxy_config: ProxyConfig,
 ) -> AssistantMessageEventStream:
     """Stream from a proxy server instead of directly from the LLM provider.
-    
+
     This is useful for:
     - Centralized API key management
     - Request logging and auditing
     - Rate limiting and quota management
     - Custom model routing logic
-    
+
     Args:
         model: The model configuration
         context: The conversation context
         options: Stream options
         proxy_config: Proxy server configuration
-    
+
     Returns:
         AssistantMessageEventStream with events from the proxy
-    
+
     Example:
         from pi_ai.stream_proxy import stream_proxy, ProxyConfig
-        
+
         config = ProxyConfig(
             proxy_url="https://your-proxy.example.com",
             auth_token="your-auth-token",
         )
-        
+
         stream = stream_proxy(model, context, proxy_config=config)
         async for event in stream:
             print(event.type)
@@ -107,7 +108,9 @@ def stream_proxy(
 
         try:
             if httpx is None:
-                raise ImportError("httpx is required for stream_proxy. Install with: pip install httpx")
+                raise ImportError(
+                    "httpx is required for stream_proxy. Install with: pip install httpx"
+                )
 
             params = _build_proxy_request(model, context, options)
 
@@ -125,7 +128,7 @@ def stream_proxy(
 
             async with httpx.AsyncClient(timeout=proxy_config.timeout) as client:
                 url = f"{proxy_config.proxy_url}/v1/chat/completions"
-                
+
                 async with client.stream("POST", url, json=params, headers=headers) as response:
                     async for line in response.aiter_lines():
                         if not line.strip() or not line.startswith("data: "):
@@ -147,14 +150,18 @@ def stream_proxy(
                         delta = choice.get("delta", {})
 
                         if choice.get("finish_reason"):
-                            output.stop_reason = cast(StopReason, _map_finish_reason(choice["finish_reason"]))
+                            output.stop_reason = cast(
+                                "StopReason", _map_finish_reason(choice["finish_reason"])
+                            )
 
                         if "usage" in data:
                             usage_data = data["usage"]
                             output.usage = Usage(
                                 input=usage_data.get("prompt_tokens", 0),
                                 output=usage_data.get("completion_tokens", 0),
-                                cacheRead=usage_data.get("prompt_tokens_details", {}).get("cached_tokens", 0),
+                                cacheRead=usage_data.get("prompt_tokens_details", {}).get(
+                                    "cached_tokens", 0
+                                ),
                                 cacheWrite=0,
                                 totalTokens=usage_data.get("total_tokens", 0),
                                 cost=calculate_cost(model, output.usage),
@@ -181,7 +188,9 @@ def stream_proxy(
                             reasoning = delta["reasoning_content"]
                             if reasoning:
                                 if not current_block or current_block.type != "thinking":
-                                    current_block = ThinkingContent(type="thinking", thinking="", thinking_signature=None)
+                                    current_block = ThinkingContent(
+                                        type="thinking", thinking="", thinking_signature=None
+                                    )
                                     output.content.append(current_block)
                                     block_index.append(len(output.content) - 1)
 
@@ -270,13 +279,17 @@ def _build_proxy_request(
         if msg.role == "user":
             messages.append({"role": "user", "content": _format_user_content(msg.content)})
         elif msg.role == "assistant":
-            messages.append({"role": "assistant", "content": _format_assistant_content(msg.content)})
+            messages.append(
+                {"role": "assistant", "content": _format_assistant_content(msg.content)}
+            )
         elif msg.role == "toolResult":
-            messages.append({
-                "role": "tool",
-                "tool_call_id": msg.tool_call_id,
-                "content": _format_tool_content(msg.content),
-            })
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": msg.tool_call_id,
+                    "content": _format_tool_content(msg.content),
+                }
+            )
 
     params: dict[str, Any] = {
         "model": model.id,
@@ -285,19 +298,23 @@ def _build_proxy_request(
     }
 
     if context.system_prompt:
-        params["messages"] = [{"role": "system", "content": context.system_prompt}] + params["messages"]
+        params["messages"] = [{"role": "system", "content": context.system_prompt}] + params[
+            "messages"
+        ]
 
     if context.tools:
         tools = []
         for tool in context.tools:
-            tools.append({
-                "type": "function",
-                "function": {
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": tool.parameters,
-                },
-            })
+            tools.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.parameters,
+                    },
+                }
+            )
         params["tools"] = tools
 
     if options:
@@ -319,10 +336,12 @@ def _format_user_content(content) -> str | list[dict[str, Any]]:
         if c.type == "text":
             result.append({"type": "text", "text": c.text})
         elif c.type == "image":
-            result.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:{c.mime_type};base64,{c.data}"},
-            })
+            result.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{c.mime_type};base64,{c.data}"},
+                }
+            )
     return result
 
 
@@ -332,19 +351,23 @@ def _format_assistant_content(content: list) -> str | list[dict[str, Any]]:
         if block.type == "text":
             result.append({"type": "text", "text": block.text})
         elif block.type == "thinking":
-            result.append({
-                "type": "text",
-                "text": f"<thinking>{block.thinking}</thinking>",
-            })
+            result.append(
+                {
+                    "type": "text",
+                    "text": f"<thinking>{block.thinking}</thinking>",
+                }
+            )
         elif block.type == "toolCall":
-            result.append({
-                "type": "function",
-                "id": block.id,
-                "function": {
-                    "name": block.name,
-                    "arguments": json.dumps(block.arguments),
-                },
-            })
+            result.append(
+                {
+                    "type": "function",
+                    "id": block.id,
+                    "function": {
+                        "name": block.name,
+                        "arguments": json.dumps(block.arguments),
+                    },
+                }
+            )
     return result if len(result) > 1 else (result[0] if result else "")
 
 

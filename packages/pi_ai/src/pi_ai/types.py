@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Any, Literal, Union
 
 from pydantic import BaseModel, ConfigDict, Field
-
 
 ThinkingLevel = Literal["minimal", "low", "medium", "high", "xhigh"]
 
