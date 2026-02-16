@@ -126,9 +126,11 @@ def _should_not_retry(error: Exception) -> bool:
 
     # Client errors (4xx)
     # Note: 429 (rate limit) is an exception that should be retried
-    if any(code in error_str for code in ["400", "401", "403", "404", "405", "406", "407", "408", "409", "410", "411", "412", "413", "414", "415", "416", "417", "418", "419", "420", "421", "422", "423", "424", "425", "426", "427", "428", "429"]):
-        if code != "429":  # 429 should be retried
+    client_error_codes = ["400", "401", "403", "404", "405", "406", "407", "408", "409", "410", "411", "412", "413", "414", "415", "416", "417", "418", "419", "420", "421", "422", "423", "424", "425", "426", "427", "428"]
+    for code in client_error_codes:
+        if code in error_str:
             return True
+    # 429 (rate limit) should be retried, so don't return True for it
 
     # Network errors and server errors should be retried
     return False
