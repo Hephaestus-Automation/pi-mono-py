@@ -50,6 +50,9 @@ exclude = [
     "**/__pycache__/",
     "**/.venv/",
 ]
+# Ignore optional dependency imports
+reportMissingImports = true
+reportMissingTypeStubs = false
 
 [dependency-groups]
 dev = [
