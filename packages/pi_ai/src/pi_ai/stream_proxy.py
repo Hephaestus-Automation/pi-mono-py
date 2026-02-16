@@ -206,36 +206,38 @@ def stream_proxy(
                         if delta.get("tool_calls"):
                             for tool_delta in delta["tool_calls"]:
                                 if not current_block or current_block.type != "toolCall":
-                                    current_block = ToolCall(
-                                        type="toolCall",
-                                        id="",
-                                        name="",
-                                        arguments={},
-                                        thoughtSignature=None,
-                                    )
+                                    # Build tool call data from delta
+                                    tool_call_data = {
+                                        "type": "toolCall",
+                                        "id": tool_delta.get("id", ""),
+                                        "name": "",
+                                        "arguments": {},
+                                        "thoughtSignature": None,
+                                    }
+                                    
+                                    # Extract function name
+                                    if "function" in tool_delta:
+                                        func = tool_delta["function"]
+                                        if "name" in func:
+                                            tool_call_data["name"] = func["name"]
+                                        if "arguments" in func:
+                                            args_str = func["arguments"]
+                                            if isinstance(args_str, str):
+                                                try:
+                                                    tool_call_data["arguments"] = json.loads(args_str)
+                                                except json.JSONDecodeError:
+                                                    pass
+                                            elif isinstance(args_str, dict):
+                                                tool_call_data["arguments"] = args_str
+                                    
+                                    current_block = ToolCall(**tool_call_data)
                                     output.content.append(current_block)
                                     block_index.append(len(output.content) - 1)
-
-                                if "id" in tool_delta:
-                                    current_block.id = tool_delta["id"]
-                                if "function" in tool_delta:
-                                    func = tool_delta["function"]
-                                    if "name" in func:
-                                        current_block.name = func["name"]
-                                    if "arguments" in func:
-                                        args_str = func["arguments"]
-                                        if isinstance(args_str, str):
-                                            try:
-                                                current_block.arguments = json.loads(args_str)
-                                            except json.JSONDecodeError:
-                                                pass
-                                        elif isinstance(args_str, dict):
-                                            current_block.arguments = args_str
 
                                 stream.push(
                                     ToolcallEndEvent(
                                         contentIndex=block_index[-1],
-                                        toolCall=cast(ToolCall, current_block),
+                                        toolCall=current_block,
                                         partial=output,
                                     )
                                 )
