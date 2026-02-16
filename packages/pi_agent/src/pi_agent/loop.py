@@ -167,7 +167,7 @@ async def _run_loop(
             new_messages.append(message)
 
             if message.stop_reason in (StopReason.error, StopReason.aborted):
-                stream.push(TurnEndEvent(message=message, tool_results=[]))
+                stream.push(TurnEndEvent(message=message, toolResults=[]))
                 stream.push(AgentEndEvent(messages=new_messages))
                 stream.end(new_messages)
                 return
@@ -191,7 +191,7 @@ async def _run_loop(
                     current_context.messages.append(result)
                     new_messages.append(result)
 
-            stream.push(TurnEndEvent(message=message, tool_results=tool_results))
+            stream.push(TurnEndEvent(message=message, toolResults=tool_results))
 
             if steering_after_tools and len(steering_after_tools) > 0:
                 pending_messages = steering_after_tools
