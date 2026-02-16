@@ -344,12 +344,11 @@ class Agent:
                         self._state.pending_tool_calls = s
 
                     case "turn_end":
-                        if (
-                            event.message.role == "assistant"
-                            and hasattr(event.message, "error_message")
-                            and event.message.error_message
-                        ):
-                            self._state.error = event.message.error_message  # type: ignore[assignment]
+                        msg = event.message
+                        role = msg.get("role") if isinstance(msg, dict) else getattr(msg, "role", None)
+                        error_msg = msg.get("error_message") if isinstance(msg, dict) else getattr(msg, "error_message", None)
+                        if role == "assistant" and error_msg:
+                            self._state.error = str(error_msg)
 
                     case "agent_end":
                         self._state.is_streaming = False
@@ -394,7 +393,7 @@ class Agent:
                     totalTokens=0,
                     cost=UsageCost(),
                 ),
-                stopReason=StopReason.aborted if self._cancel_event.is_set() else StopReason.error,
+                stopReason="aborted" if self._cancel_event.is_set() else "error",
                 errorMessage=str(err),
                 timestamp=int(time() * 1000),
             )

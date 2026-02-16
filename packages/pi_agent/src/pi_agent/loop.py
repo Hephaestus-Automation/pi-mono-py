@@ -166,7 +166,7 @@ async def _run_loop(
             )
             new_messages.append(message)
 
-            if message.stop_reason in (StopReason.error, StopReason.aborted):
+            if message.stop_reason in ("error", "aborted"):
                 stream.push(TurnEndEvent(message=message, toolResults=[]))
                 stream.push(AgentEndEvent(messages=new_messages))
                 stream.end(new_messages)
@@ -233,8 +233,8 @@ async def _stream_assistant_response(
 
     llm_context = AiContext(
         systemPrompt=context.system_prompt,
-        messages=llm_messages,
-        tools=context.tools,
+        messages=llm_messages,  # type: ignore[arg-type]
+        tools=context.tools,  # type: ignore[arg-type]
     )
 
     stream_function = stream_fn or stream_simple
@@ -271,11 +271,11 @@ async def _stream_assistant_response(
             # LLM timeout handling
             if config.llm_timeout_ms:
                 response = await asyncio.wait_for(
-                    stream_function(config.model, llm_context, options),
+                    stream_function(config.model, llm_context, options),  # type: ignore[arg-type]
                     timeout=config.llm_timeout_ms / 1000,
                 )
             else:
-                response = await stream_function(config.model, llm_context, options)
+                response = await stream_function(config.model, llm_context, options)  # type: ignore[misc,arg-type]
 
             return await _process_llm_response(response, context, stream)
 
@@ -562,7 +562,7 @@ def _create_error_message(error_text: str) -> AssistantMessage:
             totalTokens=0,
             cost=UsageCost(),
         ),
-        stopReason=StopReason.error,
+        stopReason="error",
         errorMessage=error_text,
         timestamp=int(time() * 1000),
     )

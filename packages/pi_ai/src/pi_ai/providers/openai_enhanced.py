@@ -52,9 +52,11 @@ class OpenAIOptions:
         self,
         tool_choice: str | None = None,
         reasoning_effort: str | None = None,
+        max_completion_tokens: int | None = None,
     ) -> None:
         self.tool_choice = tool_choice
         self.reasoning_effort = reasoning_effort
+        self.max_completion_tokens = max_completion_tokens
 
 
 def normalize_mistral_tool_id(tool_id: str) -> str:
@@ -152,7 +154,7 @@ async def stream_openai_completions(
 
             # Process streaming response
             stream_text = ""
-            current_block: TextContent | ThinkingContent | None = None
+            current_block: TextContent | ThinkingContent | ToolCall | None = None
             block_index = [0]
 
             async for line in response.aiter_lines():
@@ -277,7 +279,7 @@ async def stream_openai_completions(
 
         except RetryError:
             output.stop_reason = "error"
-            output.error_message = f"Failed after retries: {RetryError.last_exception}"
+            output.error_message = f"Failed after retries: {RetryError.last_exception}"  # type: ignore[union-attr]
             stream.push(ErrorEvent(reason="error", error=output))
         except asyncio.CancelledError:
             output.stop_reason = "aborted"
@@ -352,7 +354,7 @@ async def stream_openai_responses(
                 )
 
             client = httpx.AsyncClient(
-                baseUrl=model.base_url,
+                base_url=model.base_url,
                 headers={
                     "Authorization": f"Bearer {api_key}",
                     **(options.headers if options and options.headers else {}),
@@ -365,10 +367,10 @@ async def stream_openai_responses(
             stream.push(StartEvent(partial=output))
 
             # Process streaming response
-            current_block: TextContent | ThinkingContent | None = None
+            current_block: TextContent | ThinkingContent | ToolCall | None = None
             block_index = [0]
 
-            async for line in client.stream("POST", "/responses", json=params):
+            async for line in client.stream("POST", "/responses", json=params):  # type: ignore[misc]
                 if line.strip():
                     try:
                         data = json.loads(line)
@@ -470,7 +472,7 @@ async def stream_openai_responses(
 
         except RetryError:
             output.stop_reason = "error"
-            output.error_message = f"Failed after retries: {RetryError.last_exception}"
+            output.error_message = f"Failed after retries: {RetryError.last_exception}"  # type: ignore[union-attr]
             stream.push(ErrorEvent(reason="error", error=output))
         except asyncio.CancelledError:
             output.stop_reason = "aborted"

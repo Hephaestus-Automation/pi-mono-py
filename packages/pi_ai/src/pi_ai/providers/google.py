@@ -140,8 +140,8 @@ def stream_google(
                 if options is None
                 else GoogleOptions(
                     tool_choice=options.tool_choice,
-                    thinking_enabled=options.reasoning if options.reasoning else False,
-                    thinking_budget_tokens=options.thinking_budgets.get("high")
+                    thinking_enabled=options.reasoning is not None,
+                    thinking_budget_tokens=options.thinking_budgets.high
                     if options.thinking_budgets
                     else None,
                 )
@@ -391,7 +391,7 @@ async def http_client_stream(
     url = f"{model.base_url}/v1beta/models/{model.id}:streamGenerateContent"
 
     async with httpx.AsyncClient(
-        baseUrl=model.base_url,
+        base_url=model.base_url,
         headers={
             "Content-Type": "application/json",
             "x-goog-api-key": headers.get("Authorization", "").replace("Bearer ", ""),

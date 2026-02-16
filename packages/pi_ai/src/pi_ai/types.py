@@ -71,6 +71,8 @@ class StreamOptions(BaseModel):
     headers: dict[str, str] | None = None
     max_retry_delay_ms: int | None = Field(default=None, alias="maxRetryDelayMs")
     tool_choice: str | None = Field(default=None, alias="toolChoice")
+    reasoning: ThinkingLevel | None = None
+    thinking_budgets: ThinkingBudgets | None = Field(default=None, alias="thinkingBudgets")
 
 
 class SimpleStreamOptions(StreamOptions):
