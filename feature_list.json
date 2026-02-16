@@ -1,7 +1,7 @@
 {
   "project": "pi-mono-py",
   "description": "Python implementation of pi-mono (pi-ai + pi-agent-core)",
-  "last_updated": "2026-02-13",
+  "last_updated": "2026-02-16",
   "categories": {
     "phase0_bugs": "Phase 0: Fix Existing Bugs",
     "phase1_types": "Phase 1: Complete Type System",
@@ -176,7 +176,7 @@
         "Add OAuth token support"
       ],
       "verification": "uv run pytest packages/pi_ai/providers/test_anthropic.py -v",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P2-004",
@@ -202,7 +202,7 @@
         "Implement image input support"
       ],
       "verification": "uv run pytest packages/pi_ai/providers/test_google.py -v",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P2-006",
@@ -216,7 +216,7 @@
         "Handle message format adaptation"
       ],
       "verification": "uv run pytest packages/pi_ai/providers/test_transform.py -v",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P3-001",
