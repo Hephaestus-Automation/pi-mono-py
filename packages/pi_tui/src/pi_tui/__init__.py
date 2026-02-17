@@ -7,44 +7,43 @@ TypeScript Reference: _ts_reference/tui.ts, _ts_reference/index.ts
 """
 
 from pi_tui.component import Component, Focusable, is_focusable
+from pi_tui.components import (
+    Box,
+    CancellableLoader,
+    DefaultSelectListTheme,
+    Input,
+    Loader,
+    SelectItem,
+    SelectList,
+    Spacer,
+    Text,
+    TruncatedText,
+)
 from pi_tui.container import Container
+from pi_tui.keys import (
+    Key,
+    KeyEventType,
+    KeyId,
+    is_key_release,
+    is_key_repeat,
+    matches_key,
+    parse_key,
+)
+from pi_tui.stdin_buffer import StdinBuffer, StdinBufferOptions
+from pi_tui.terminal import ProcessTerminal, Terminal
 from pi_tui.tui import (
-    TUI,
     CURSOR_MARKER,
+    TUI,
     OverlayAnchor,
     OverlayHandle,
     OverlayMargin,
     OverlayOptions,
     SizeValue,
 )
-from pi_tui.terminal import Terminal, ProcessTerminal
-from pi_tui.keys import (
-    Key,
-    KeyId,
-    KeyEventType,
-    parse_key,
-    matches_key,
-    is_key_release,
-    is_key_repeat,
-)
-from pi_tui.stdin_buffer import StdinBuffer, StdinBufferOptions
 from pi_tui.utils import (
-    visible_width,
     truncate_to_width,
+    visible_width,
     wrap_text_with_ansi,
-)
-
-from pi_tui.components import (
-    Text,
-    Box,
-    TruncatedText,
-    Spacer,
-    Loader,
-    CancellableLoader,
-    Input,
-    SelectList,
-    SelectItem,
-    DefaultSelectListTheme,
 )
 
 __all__ = [

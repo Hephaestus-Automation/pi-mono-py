@@ -5,11 +5,13 @@ Shared pytest fixtures for pi_tui tests.
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import MagicMock, Mock
-from typing import Callable, Generator
+from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
 
 import pytest
 
+if TYPE_CHECKING:
+    from collections.abc import Callable, Generator
 
 # =============================================================================
 # Kitty Protocol Fixtures
@@ -19,8 +21,8 @@ import pytest
 @pytest.fixture
 def reset_kitty_protocol() -> Generator[None, None, None]:
     """Reset Kitty protocol state before/after each test."""
-    from pi_tui.keys import set_kitty_protocol_active, is_kitty_protocol_active
-    
+    from pi_tui.keys import is_kitty_protocol_active, set_kitty_protocol_active
+
     original_state = is_kitty_protocol_active()
     set_kitty_protocol_active(False)
     yield
@@ -31,7 +33,7 @@ def reset_kitty_protocol() -> Generator[None, None, None]:
 def kitty_protocol_active() -> Generator[None, None, None]:
     """Run test with Kitty protocol enabled."""
     from pi_tui.keys import set_kitty_protocol_active
-    
+
     set_kitty_protocol_active(True)
     yield
     set_kitty_protocol_active(False)
@@ -318,4 +320,7 @@ def sample_lines() -> list[str]:
 @pytest.fixture
 def sample_multiline_text() -> str:
     """Provide sample multiline text for wrapping tests."""
-    return "This is a sample text that should be wrapped across multiple lines when rendered at narrow widths."
+    return (
+        "This is a sample text that should be wrapped across multiple lines when "
+        "rendered at narrow widths."
+    )

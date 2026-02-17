@@ -12,7 +12,7 @@ from pi_tui.component import Component
 class Spacer(Component):
     """
     Spacer component that renders empty lines.
-    
+
     TypeScript Reference: _ts_reference/components/spacer.ts:Spacer
     """
 

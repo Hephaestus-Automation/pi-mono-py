@@ -334,12 +334,12 @@ def _build_params(
             "type": "enabled",
             "budget_tokens": options.thinking_budget_tokens if options.thinking_budget_tokens else 1024,
         }
-    
+
     if options.thinking_level:
         if not params.get("thinking"):
             params["thinking"] = {}
         params["thinking"]["type"] = options.thinking_level
-    
+
     if options.interleaved_thinking is not None:
         if not params.get("thinking"):
             params["thinking"] = {}

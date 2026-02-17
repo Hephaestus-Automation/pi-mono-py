@@ -2,12 +2,11 @@
 Tests for pi_tui/stdin_buffer.py - input buffering.
 """
 
-import pytest
 from pi_tui.stdin_buffer import (
-    is_complete_sequence,
-    extract_complete_sequences,
     StdinBuffer,
     StdinBufferOptions,
+    extract_complete_sequences,
+    is_complete_sequence,
 )
 
 

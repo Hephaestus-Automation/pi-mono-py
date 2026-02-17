@@ -7,10 +7,13 @@ TypeScript Reference: _ts_reference/components/box.ts
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable
+from typing import TYPE_CHECKING
 
 from pi_tui.component import Component
 from pi_tui.utils import apply_background_to_line, visible_width
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @dataclass

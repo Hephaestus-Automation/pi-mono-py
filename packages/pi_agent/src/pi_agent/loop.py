@@ -2,15 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import random
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from time import time
-from typing import Any, Callable
+from typing import Any
 
 from pi_ai.event_stream import EventStream
 from pi_ai.stream import stream_simple
 from pi_ai.types import (
     AssistantMessage,
-    StopReason,
     TextContent,
     ToolCall,
     ToolResultMessage,

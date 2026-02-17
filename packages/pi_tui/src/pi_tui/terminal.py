@@ -7,15 +7,19 @@ TypeScript Reference: _ts_reference/terminal.ts
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import re
 import shutil
 import signal
 import sys
-from typing import Any, Callable, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from pi_tui.keys import set_kitty_protocol_active
 from pi_tui.stdin_buffer import StdinBuffer, StdinBufferOptions
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class Terminal(Protocol):
@@ -113,14 +117,12 @@ class ProcessTerminal:
         import termios
 
         if self._old_term_settings is not None:
-            try:
+            with contextlib.suppress(termios.error, OSError):
                 termios.tcsetattr(
                     sys.stdin.fileno(),
                     termios.TCSADRAIN,
                     self._old_term_settings,
                 )
-            except (termios.error, OSError):
-                pass
             self._old_term_settings = None
 
     def _setup_stdin_buffer(self) -> None:
@@ -164,7 +166,7 @@ class ProcessTerminal:
                     data = await asyncio.wait_for(reader.read(1024), timeout=0.1)
                     if data and self._stdin_buffer:
                         self._stdin_buffer.process(data)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     continue
         except (asyncio.CancelledError, ConnectionError):
             pass
@@ -216,10 +218,8 @@ class ProcessTerminal:
             self._read_task = None
 
         if sys.platform != "win32":
-            try:
+            with contextlib.suppress(ValueError, OSError):
                 signal.signal(signal.SIGWINCH, signal.SIG_DFL)
-            except (ValueError, OSError):
-                pass
 
         self._input_handler = None
         self._resize_handler = None
@@ -269,7 +269,7 @@ class ProcessTerminal:
                         reader.read(1024), timeout=min(idle_seconds, time_left)
                     )
                     on_data()
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     continue
         finally:
             transport.close()

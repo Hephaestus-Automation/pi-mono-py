@@ -13,7 +13,7 @@ from pi_tui.utils import truncate_to_width, visible_width
 class TruncatedText(Component):
     """
     Text component that truncates to fit viewport width.
-    
+
     TypeScript Reference: _ts_reference/components/truncated-text.ts:TruncatedText
     """
 

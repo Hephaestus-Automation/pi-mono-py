@@ -1,13 +1,16 @@
-import pytest
 from unittest.mock import patch
+
+import pytest
+
 from pi_tui.utils import (
-    visible_width,
-    truncate_to_width,
-    wrap_text_with_ansi,
-    slice_by_column,
+    _strip_ansi,
     apply_background_to_line,
-    _strip_ansi
+    slice_by_column,
+    truncate_to_width,
+    visible_width,
+    wrap_text_with_ansi,
 )
+
 
 class TestVisibleWidth:
     """Tests for visible_width() function."""
@@ -38,7 +41,7 @@ class TestVisibleWidth:
         assert visible_width(text) == expected
 
     def test_visible_width_cjk(self):
-        # Since wcwidth might be the fallback (returning 1), 
+        # Since wcwidth might be the fallback (returning 1),
         # we mock it to test wide character behavior
         with patch("pi_tui.utils.wcwidth", side_effect=lambda c: 2 if ord(c) > 0x4e00 else 1):
             assert visible_width("你好") == 4
@@ -53,11 +56,13 @@ class TestVisibleWidth:
     def test_visible_width_zero_width(self):
         with patch("pi_tui.utils.wcwidth", return_value=0):
             assert visible_width("\u200b") == 0  # Zero width space
-        
+
         # 'a' with combining grave accent
         def mock_wcwidth(c):
-            if c == 'a': return 1
-            if c == '\u0300': return 0
+            if c == 'a':
+                return 1
+            if c == '\u0300':
+                return 0
             return 1
         with patch("pi_tui.utils.wcwidth", side_effect=mock_wcwidth):
             assert visible_width("a\u0300") == 1
@@ -121,7 +126,7 @@ class TestTruncateToWidth:
             # '你' (2). Next '好' (2). 2+2 > 2 is True.
             # Result: "你..."
             assert truncate_to_width("你好世界", 5) == "你..."
-            
+
             # Truncate to 4. max_width-ellipsis_width=1.
             # '你' (2). 2 > 1 is True.
             # Result: "..."
@@ -189,7 +194,7 @@ class TestWrapTextWithAnsi:
         assert wrap_text_with_ansi(text, 5) == ["\x1b[31mhello\x1b[0m", "\x1b[32mworld\x1b[0m"]
 
     def test_wrap_ansi_preserved_across_lines(self):
-        # Note: The current implementation of wrap_text_with_ansi in utils.py 
+        # Note: The current implementation of wrap_text_with_ansi in utils.py
         # DOES NOT actually preserve active styles across lines.
         # It just splits by space and keeps whatever ANSI was in the word.
         # If a style starts in one word and ends in another, and they are on different lines,
@@ -247,15 +252,17 @@ class TestSliceByColumn:
             text = "你好世界" # 8 width
             # Slice 2, 4 -> "好世"
             assert slice_by_column(text, 2, 4) == "好世"
-            
-            # Slice 1, 4 -> "好" (if strict=True, '你' is skipped because it starts at 0 and ends at 2, which is > 1 but current_col < 1? No.)
-            # current_col=0. '你' char_end_col=2. 
+
+            # Slice 1, 4 -> "好" (if strict=True, '你' is skipped
+            # because it starts at 0 and ends at 2, which is > 1 but
+            # current_col < 1? No.)
+            # current_col=0. '你' char_end_col=2.
             # char_end_col(2) > start_col(1) and current_col(0) < end_col(5) is True.
             # So '你' is included.
-            assert slice_by_column(text, 1, 4) == "你好世" 
-            # Wait, '世' ends at 6. 6 > 5 (end_col). 
+            assert slice_by_column(text, 1, 4) == "你好世"
+            # Wait, '世' ends at 6. 6 > 5 (end_col).
             # If strict=False, '世' is included.
-            
+
             # Test strict mode
             # text="你好世界", start=0, length=3, strict=True
             # '你' (0-2) included.
@@ -270,7 +277,8 @@ class TestApplyBackgroundToLine:
     """Tests for apply_background_to_line() function."""
 
     def test_apply_bg_basic(self):
-        bg_fn = lambda x: f"\x1b[44m{x}\x1b[0m"
+        def bg_fn(x):
+            return f"\x1b[44m{x}\x1b[0m"
         line = "hello"
         width = 10
         # Should pad to 10 and apply bg
@@ -281,6 +289,7 @@ class TestApplyBackgroundToLine:
         assert apply_background_to_line("hello", 10, None) == "hello"
 
     def test_apply_bg_already_wide_enough(self):
-        bg_fn = lambda x: f"BG({x})"
+        def bg_fn(x):
+            return f"BG({x})"
         assert apply_background_to_line("hello world", 5, bg_fn) == "BG(hello world)"
 

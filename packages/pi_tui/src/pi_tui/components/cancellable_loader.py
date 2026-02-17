@@ -6,19 +6,21 @@ TypeScript Reference: _ts_reference/components/cancellable-loader.ts
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from pi_tui.tui import TUI
 
 from pi_tui.components.loader import Loader
-from pi_tui.keys import matches_key, Key
+from pi_tui.keys import Key, matches_key
 
 
 class CancellableLoader(Loader):
     """
     Loader that can be cancelled with Escape.
-    
+
     TypeScript Reference: _ts_reference/components/cancellable-loader.ts:CancellableLoader
     """
 

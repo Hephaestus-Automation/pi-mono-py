@@ -7,9 +7,11 @@ TypeScript Reference: _ts_reference/components/loader.ts
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from pi_tui.tui import TUI
 
 from pi_tui.components.text import Text
@@ -18,7 +20,7 @@ from pi_tui.components.text import Text
 class Loader(Text):
     """
     Loader component that updates with spinning animation.
-    
+
     TypeScript Reference: _ts_reference/components/loader.ts:Loader
     """
 

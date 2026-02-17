@@ -214,7 +214,7 @@ def stream_proxy(
                                         "arguments": {},
                                         "thoughtSignature": None,
                                     }
-                                    
+
                                     # Extract function name
                                     if "function" in tool_delta:
                                         func = tool_delta["function"]
@@ -229,7 +229,7 @@ def stream_proxy(
                                                     pass
                                             elif isinstance(args_str, dict):
                                                 tool_call_data["arguments"] = args_str
-                                    
+
                                     current_block = ToolCall(**tool_call_data)
                                     output.content.append(current_block)
                                     block_index.append(len(output.content) - 1)

@@ -6,12 +6,14 @@ TypeScript Reference: _ts_reference/components/input.ts
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import TYPE_CHECKING
 
 from pi_tui.component import Component
-from pi_tui.keys import matches_key, Key
+from pi_tui.keys import Key, matches_key
 from pi_tui.utils import visible_width
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 CURSOR_MARKER = "\x1b_pi:c\x07"
 
@@ -19,7 +21,7 @@ CURSOR_MARKER = "\x1b_pi:c\x07"
 class Input(Component):
     """
     Input component - single-line text input with horizontal scrolling.
-    
+
     TypeScript Reference: _ts_reference/components/input.ts:Input
     """
 
@@ -198,7 +200,9 @@ class Input(Component):
         if len(self._value) < available_width:
             visible_text = self._value
         else:
-            scroll_width = available_width - 1 if self._cursor == len(self._value) else available_width
+            scroll_width = (
+                available_width - 1 if self._cursor == len(self._value) else available_width
+            )
             half_width = scroll_width // 2
 
             if self._cursor < half_width:
@@ -214,8 +218,16 @@ class Input(Component):
                 cursor_display = half_width
 
         before_cursor = visible_text[:cursor_display]
-        at_cursor = visible_text[cursor_display:cursor_display + 1] if cursor_display < len(visible_text) else " "
-        after_cursor = visible_text[cursor_display + 1:] if cursor_display + 1 < len(visible_text) else ""
+        at_cursor = (
+            visible_text[cursor_display:cursor_display + 1]
+            if cursor_display < len(visible_text)
+            else " "
+        )
+        after_cursor = (
+            visible_text[cursor_display + 1 :]
+            if cursor_display + 1 < len(visible_text)
+            else ""
+        )
 
         marker = CURSOR_MARKER if self.focused else ""
         cursor_char = f"\x1b[7m{at_cursor}\x1b[27m"

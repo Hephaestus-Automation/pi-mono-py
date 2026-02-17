@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import base64
 from typing import Any, cast
 
 from ..env_keys import get_env_api_key
@@ -33,13 +32,11 @@ from ..types import (
     ThinkingContent,
     ThinkingDeltaEvent,
     ToolCall,
-    ToolcallDeltaEvent,
     ToolcallEndEvent,
     Usage,
     UsageCost,
 )
-
-from .retry import retry_http_request, RetryError
+from .retry import RetryError, retry_http_request
 
 try:
     import httpx
@@ -671,12 +668,12 @@ def _format_user_content(content) -> str | list[dict[str, Any]]:
     """
     if isinstance(content, str):
         return content
-    
+
     # Handle image content
     if isinstance(content, list):
         formatted_content = []
         text_parts = []
-        
+
         for item in content:
             if isinstance(item, TextContent):
                 text_parts.append(item.text)
@@ -697,7 +694,7 @@ def _format_user_content(content) -> str | list[dict[str, Any]]:
                 else:
                     # Treat as text
                     text_parts.append(str(item.data))
-        
+
         # Combine text and images
         if text_parts:
             formatted_content.append({
@@ -714,9 +711,9 @@ def _format_user_content(content) -> str | list[dict[str, Any]]:
                 "type": "text",
                 "text": " ".join(text_parts),
             })
-        
+
         return formatted_content
-    
+
     return [{"type": "text", "text": "text"}]
 
 

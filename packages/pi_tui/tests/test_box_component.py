@@ -1,5 +1,6 @@
-from pi_tui.components.box import Box
 from unittest.mock import MagicMock
+
+from pi_tui.components.box import Box
 
 # =============================================================================
 # A. Basic Rendering Tests (10 tests)
@@ -72,7 +73,8 @@ def test_render_child_multiple_lines(mock_component_factory):
 
 def test_render_with_bg_fn(mock_component_factory):
     """Test rendering with background function."""
-    bg_fn = lambda s: f"BG({s})"
+    def bg_fn(s):
+        return f"BG({s})"
     child = mock_component_factory(["hi"])
     box = Box(padding_x=0, padding_y=0, bg_fn=bg_fn)
     box.add_child(child)
@@ -175,15 +177,15 @@ def test_cache_used_on_second_render(mock_component_factory):
     bg_fn = MagicMock(side_effect=lambda s: s)
     box = Box(padding_x=0, padding_y=0, bg_fn=bg_fn)
     box.add_child(child)
-    
+
     # First render
     box.render(10)
     # bg_fn called for: bg_sample("test") and _apply_bg("hello", 10)
     assert bg_fn.call_count == 2
-    
+
     # Second render
     box.render(10)
-    # bg_fn called for: bg_sample("test") only. 
+    # bg_fn called for: bg_sample("test") only.
     # _apply_bg is NOT called again because of cache.
     assert bg_fn.call_count == 3
     # Note: child.render IS called again because Box needs to check if child output changed
@@ -194,13 +196,13 @@ def test_cache_invalidated_on_add_child(mock_component_factory):
     box = Box(padding_x=0, padding_y=0)
     c1 = mock_component_factory(["c1"])
     box.add_child(c1)
-    
+
     box.render(10)
     assert len(c1.render_calls) == 1
-    
+
     c2 = mock_component_factory(["c2"])
     box.add_child(c2)
-    
+
     box.render(10)
     assert len(c1.render_calls) == 2
     assert len(c2.render_calls) == 1
@@ -210,13 +212,13 @@ def test_cache_invalidated_on_invalidate(mock_component_factory):
     child = mock_component_factory(["hello"])
     box = Box(padding_x=0, padding_y=0)
     box.add_child(child)
-    
+
     box.render(10)
     assert len(child.render_calls) == 1
-    
+
     box.invalidate()
     assert child.invalidate_calls == 1
-    
+
     box.render(10)
     assert len(child.render_calls) == 2
 
@@ -225,10 +227,10 @@ def test_cache_invalidated_on_width_change(mock_component_factory):
     child = mock_component_factory(["hello"])
     box = Box(padding_x=0, padding_y=0)
     box.add_child(child)
-    
+
     box.render(10)
     assert len(child.render_calls) == 1
-    
+
     box.render(20)
     assert len(child.render_calls) == 2
 
@@ -237,9 +239,9 @@ def test_cache_invalidated_on_remove_child(mock_component_factory):
     box = Box(padding_x=0, padding_y=0)
     c1 = mock_component_factory(["c1"])
     box.add_child(c1)
-    
+
     box.render(10)
     assert len(c1.render_calls) == 1
-    
+
     box.remove_child(c1)
     assert box.render(10) == []

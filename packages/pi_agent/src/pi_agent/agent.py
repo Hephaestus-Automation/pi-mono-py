@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Awaitable
+from collections.abc import Callable
 from time import time
 from typing import Any, Literal, cast
 
@@ -12,7 +12,6 @@ from pi_ai.types import (
     ImageContent,
     Message,
     Model,
-    StopReason,
     TextContent,
     ThinkingContent,
     ToolCall,
@@ -377,7 +376,7 @@ class Agent:
                             raise RuntimeError("Request was aborted")
 
         except Exception as err:
-            from pi_ai.types import StopReason, Usage, UsageCost
+            from pi_ai.types import Usage, UsageCost
 
             error_message = AssistantMessage(
                 role="assistant",

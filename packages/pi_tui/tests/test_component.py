@@ -2,10 +2,10 @@
 Tests for pi_tui.component module.
 """
 
-import pytest
-from typing import Any
-from pi_tui.component import Component, Focusable, is_focusable
 
+import pytest
+
+from pi_tui.component import Component, Focusable, is_focusable
 
 # =============================================================================
 # Concrete Component for Testing
@@ -48,7 +48,7 @@ def test_render_is_abstract():
     """Test render() is abstract (raises TypeError if not implemented)."""
     class IncompleteComponent(Component):
         pass
-    
+
     with pytest.raises(TypeError, match="Can't instantiate abstract class IncompleteComponent"):
         IncompleteComponent()  # type: ignore
 
@@ -120,7 +120,7 @@ class NonFocusable:
 
 def test_class_with_focused_attribute_implements_focusable():
     """Test class with focused attribute implements Focusable."""
-    # Since Focusable is a Protocol, we check if an instance with 'focused' 
+    # Since Focusable is a Protocol, we check if an instance with 'focused'
     # attribute can be treated as Focusable.
     obj: Focusable = SimpleFocusable(focused=True)
     assert obj.focused is True
@@ -146,7 +146,7 @@ def test_focused_can_be_false():
 
 def test_focusable_protocol_attribute_access():
     """Test that Focusable protocol defines focused attribute."""
-    # This is more of a type-checking test, but we can verify the protocol 
+    # This is more of a type-checking test, but we can verify the protocol
     # itself has the attribute in its __annotations__
     assert "focused" in Focusable.__annotations__
 

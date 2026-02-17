@@ -1,5 +1,5 @@
-import pytest
 from pi_tui.components.text import Text
+
 
 def test_render_plain_text():
     """Test render plain text."""

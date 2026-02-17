@@ -85,15 +85,15 @@ def is_kitty_protocol_active() -> bool:
 class _KeyHelper:
     """
     Helper object for creating typed key identifiers with autocomplete.
-    
+
     Usage:
     - Key.escape, Key.enter, Key.tab, etc. for special keys
     - Key.ctrl("c"), Key.alt("x") for single modifier
     - Key.ctrl_shift("p"), Key.ctrl_alt("x") for combined modifiers
-    
+
     TypeScript Reference: _ts_reference/keys.ts:Key object
     """
-    
+
     # Special keys
     escape: Literal["escape"] = "escape"
     esc: Literal["esc"] = "esc"
@@ -107,8 +107,8 @@ class _KeyHelper:
     clear: Literal["clear"] = "clear"
     home: Literal["home"] = "home"
     end: Literal["end"] = "end"
-    pageUp: Literal["pageUp"] = "pageUp"
-    pageDown: Literal["pageDown"] = "pageDown"
+    pageUp: Literal["pageUp"] = "pageUp"  # noqa: N815
+    pageDown: Literal["pageDown"] = "pageDown"  # noqa: N815
     up: Literal["up"] = "up"
     down: Literal["down"] = "down"
     left: Literal["left"] = "left"
@@ -125,7 +125,7 @@ class _KeyHelper:
     f10: Literal["f10"] = "f10"
     f11: Literal["f11"] = "f11"
     f12: Literal["f12"] = "f12"
-    
+
     # Symbol keys
     backtick: Literal["`"] = "`"
     hyphen: Literal["-"] = "-"
@@ -138,45 +138,45 @@ class _KeyHelper:
     comma: Literal[","] = ","
     period: Literal["."] = "."
     slash: Literal["/"] = "/"
-    
+
     # Single modifiers
     @staticmethod
     def ctrl(key: BaseKey) -> str:
         return f"ctrl+{key}"
-    
+
     @staticmethod
     def shift(key: BaseKey) -> str:
         return f"shift+{key}"
-    
+
     @staticmethod
     def alt(key: BaseKey) -> str:
         return f"alt+{key}"
-    
+
     # Combined modifiers
     @staticmethod
     def ctrl_shift(key: BaseKey) -> str:
         return f"ctrl+shift+{key}"
-    
+
     @staticmethod
     def shift_ctrl(key: BaseKey) -> str:
         return f"shift+ctrl+{key}"
-    
+
     @staticmethod
     def ctrl_alt(key: BaseKey) -> str:
         return f"ctrl+alt+{key}"
-    
+
     @staticmethod
     def alt_ctrl(key: BaseKey) -> str:
         return f"alt+ctrl+{key}"
-    
+
     @staticmethod
     def shift_alt(key: BaseKey) -> str:
         return f"shift+alt+{key}"
-    
+
     @staticmethod
     def alt_shift(key: BaseKey) -> str:
         return f"alt+shift+{key}"
-    
+
     @staticmethod
     def ctrl_shift_alt(key: BaseKey) -> str:
         return f"ctrl+shift+alt+{key}"
@@ -428,7 +428,7 @@ def _parse_event_type(event_type_str: str | None) -> str:
 def _parse_kitty_sequence(data: str) -> ParsedKittySequence | None:
     """
     Parse a Kitty keyboard protocol sequence.
-    
+
     Format variations:
     - \x1b[<codepoint>u
     - \x1b[<codepoint>;<mod>u
@@ -437,7 +437,7 @@ def _parse_kitty_sequence(data: str) -> ParsedKittySequence | None:
     - \x1b[<codepoint>:<shifted>:<base>;<mod>u
     """
     global _last_event_type
-    
+
     # CSI u format
     csi_u_match = re.match(
         r"^\x1b\[(\d+)(?::(\d*))?(?::(\d+))?(?:;(\d+))?(?::(\d+))?u$",
@@ -457,7 +457,7 @@ def _parse_kitty_sequence(data: str) -> ParsedKittySequence | None:
             modifier=mod_value - 1,
             event_type=event_type,
         )
-    
+
     # Arrow keys with modifier: \x1b[1;<mod>A/B/C/D
     arrow_match = re.match(r"^\x1b\[1;(\d+)(?::(\d+))?([ABCD])$", data)
     if arrow_match:
@@ -472,7 +472,7 @@ def _parse_kitty_sequence(data: str) -> ParsedKittySequence | None:
             modifier=mod_value - 1,
             event_type=event_type,
         )
-    
+
     # Functional keys: \x1b[<num>~ or \x1b[<num>;<mod>~
     func_match = re.match(r"^\x1b\[(\d+)(?:;(\d+))?(?::(\d+))?~$", data)
     if func_match:
@@ -496,7 +496,7 @@ def _parse_kitty_sequence(data: str) -> ParsedKittySequence | None:
                 modifier=mod_value - 1,
                 event_type=event_type,
             )
-    
+
     # Home/End with modifier: \x1b[1;<mod>H/F
     home_end_match = re.match(r"^\x1b\[1;(\d+)(?::(\d+))?([HF])$", data)
     if home_end_match:
@@ -515,7 +515,7 @@ def _parse_kitty_sequence(data: str) -> ParsedKittySequence | None:
             modifier=mod_value - 1,
             event_type=event_type,
         )
-    
+
     return None
 
 
@@ -524,16 +524,16 @@ def _matches_kitty_sequence(data: str, expected_codepoint: int, expected_modifie
     parsed = _parse_kitty_sequence(data)
     if not parsed:
         return False
-    
+
     actual_mod = parsed["modifier"] & ~LOCK_MASK
     expected_mod = expected_modifier & ~LOCK_MASK
-    
+
     if actual_mod != expected_mod:
         return False
-    
+
     if parsed["codepoint"] == expected_codepoint:
         return True
-    
+
     # Alternate match using base layout key for non-Latin layouts
     if parsed["base_layout_key"] is not None and parsed["base_layout_key"] == expected_codepoint:
         cp = parsed["codepoint"]
@@ -541,7 +541,7 @@ def _matches_kitty_sequence(data: str, expected_codepoint: int, expected_modifie
         is_known_symbol = chr(cp) in SYMBOL_KEYS
         if not is_latin_letter and not is_known_symbol:
             return True
-    
+
     return False
 
 
@@ -588,7 +588,7 @@ def _parse_key_id(key_id: str) -> dict | None:
 def matches_key(data: str, key_id: KeyId) -> bool:
     """
     Match input data against a key identifier string.
-    
+
     Supported key identifiers:
     - Single keys: "escape", "tab", "enter", "backspace", "delete", "home", "end", "space"
     - Arrow keys: "up", "down", "left", "right"
@@ -596,27 +596,27 @@ def matches_key(data: str, key_id: KeyId) -> bool:
     - Shift combinations: "shift+tab", "shift+enter"
     - Alt combinations: "alt+enter", "alt+backspace"
     - Combined modifiers: "shift+ctrl+p", "ctrl+alt+x"
-    
+
     Use the Key helper for autocomplete: Key.ctrl("c"), Key.escape, Key.ctrl_shift("p")
-    
+
     TypeScript Reference: _ts_reference/keys.ts:matchesKey
-    
+
     Args:
         data: Raw input data from terminal
         key_id: Key identifier (e.g., "ctrl+c", "escape", Key.ctrl("c"))
-        
+
     Returns:
         True if the input matches the key identifier
     """
     parsed = _parse_key_id(key_id)
     if not parsed:
         return False
-    
+
     key = parsed["key"]  # type: ignore[assignment]
     ctrl = parsed["ctrl"]
     shift = parsed["shift"]
     alt = parsed["alt"]
-    
+
     modifier = 0
     if shift:
         modifier |= MODIFIERS["shift"]
@@ -624,13 +624,13 @@ def matches_key(data: str, key_id: KeyId) -> bool:
         modifier |= MODIFIERS["alt"]
     if ctrl:
         modifier |= MODIFIERS["ctrl"]
-    
+
     # Escape
     if key in ("escape", "esc"):
         if modifier != 0:
             return False
         return data == "\x1b" or _matches_kitty_sequence(data, CODEPOINTS["escape"], 0)
-    
+
     # Space
     if key == "space":
         if not _kitty_protocol_active:
@@ -641,7 +641,7 @@ def matches_key(data: str, key_id: KeyId) -> bool:
         if modifier == 0:
             return data == " " or _matches_kitty_sequence(data, CODEPOINTS["space"], 0)
         return _matches_kitty_sequence(data, CODEPOINTS["space"], modifier)
-    
+
     # Tab
     if key == "tab":
         if shift and not ctrl and not alt:
@@ -652,7 +652,7 @@ def matches_key(data: str, key_id: KeyId) -> bool:
         if modifier == 0:
             return data == "\t" or _matches_kitty_sequence(data, CODEPOINTS["tab"], 0)
         return _matches_kitty_sequence(data, CODEPOINTS["tab"], modifier)
-    
+
     # Enter
     if key in ("enter", "return"):
         if shift and not ctrl and not alt:
@@ -687,7 +687,7 @@ def matches_key(data: str, key_id: KeyId) -> bool:
             _matches_kitty_sequence(data, CODEPOINTS["enter"], modifier)
             or _matches_kitty_sequence(data, CODEPOINTS["kp_enter"], modifier)
         )
-    
+
     # Backspace
     if key == "backspace":
         if alt and not ctrl and not shift:
@@ -700,7 +700,7 @@ def matches_key(data: str, key_id: KeyId) -> bool:
                 or _matches_kitty_sequence(data, CODEPOINTS["backspace"], 0)
             )
         return _matches_kitty_sequence(data, CODEPOINTS["backspace"], modifier)
-    
+
     # Functional keys (insert, delete, home, end, pageUp, pageDown)
     functional_keys = ["insert", "delete", "home", "end", "pageup", "pagedown"]
     if key in functional_keys:
@@ -708,26 +708,24 @@ def matches_key(data: str, key_id: KeyId) -> bool:
         legacy_key: str = key_map.get(key, key)  # type: ignore[arg-type]
         legacy_sequences = LEGACY_KEY_SEQUENCES.get(legacy_key, [])
         cp = FUNCTIONAL_CODEPOINTS.get(legacy_key)
-        
+
         if modifier == 0:
             if _matches_legacy_sequence(data, legacy_sequences):
                 return True
-            if cp and _matches_kitty_sequence(data, cp, 0):
-                return True
-            return False
-        
+            return bool(cp and _matches_kitty_sequence(data, cp, 0))
+
         if _matches_legacy_modifier_sequence(data, key, modifier):
             return True
         if cp:
             return _matches_kitty_sequence(data, cp, modifier)
         return False
-    
+
     # Arrow keys
     arrow_keys = ["up", "down", "left", "right"]
     if key in arrow_keys:
         legacy_sequences = LEGACY_KEY_SEQUENCES.get(key, [])
         cp = ARROW_CODEPOINTS[key]
-        
+
         # Alt variations
         if alt and not ctrl and not shift:
             if key == "up":
@@ -748,7 +746,7 @@ def matches_key(data: str, key_id: KeyId) -> bool:
                     or data == "\x1bf"
                     or _matches_kitty_sequence(data, cp, MODIFIERS["alt"])
                 )
-        
+
         # Ctrl variations
         if ctrl and not alt and not shift and key == "left":
             return (
@@ -756,24 +754,24 @@ def matches_key(data: str, key_id: KeyId) -> bool:
                 or _matches_legacy_modifier_sequence(data, "left", MODIFIERS["ctrl"])
                 or _matches_kitty_sequence(data, cp, MODIFIERS["ctrl"])
             )
-        
+
         if ctrl and not alt and not shift and key == "right":
             return (
                 data == "\x1b[1;5C"
                 or _matches_legacy_modifier_sequence(data, "right", MODIFIERS["ctrl"])
                 or _matches_kitty_sequence(data, cp, MODIFIERS["ctrl"])
             )
-        
+
         if modifier == 0:
             return (
                 _matches_legacy_sequence(data, legacy_sequences)
                 or _matches_kitty_sequence(data, cp, 0)
             )
-        
+
         if _matches_legacy_modifier_sequence(data, key, modifier):
             return True
         return _matches_kitty_sequence(data, cp, modifier)
-    
+
     # Function keys (F1-F12)
     fn_key = key if key.startswith("f") and key[1:].isdigit() else None
     if fn_key and fn_key in LEGACY_KEY_SEQUENCES:
@@ -781,75 +779,75 @@ def matches_key(data: str, key_id: KeyId) -> bool:
         if modifier == 0:
             return _matches_legacy_sequence(data, legacy_sequences)
         return False  # Function keys with modifiers not fully implemented
-    
+
     # Clear key
     if key == "clear":
         if modifier == 0:
             return _matches_legacy_sequence(data, LEGACY_KEY_SEQUENCES.get("clear", []))
         return _matches_legacy_modifier_sequence(data, "clear", modifier)
-    
+
     # Letter keys (a-z)
     if len(key) == 1 and key.isalpha():
         char_code = ord(key)
-        
+
         # Ctrl combinations
         if ctrl and not alt and not shift:
             ctrl_char = _raw_ctrl_char(key)
             if ctrl_char and data == ctrl_char:
                 return True
             return _matches_kitty_sequence(data, char_code, MODIFIERS["ctrl"])
-        
+
         # Alt combinations
         if alt and not ctrl and not shift:
             if data == f"\x1b{key}" or data == f"\x1b{key.upper()}":
                 return True
             return _matches_kitty_sequence(data, char_code, MODIFIERS["alt"])
-        
+
         # No modifier
         if modifier == 0:
             return data == key or data == key.upper()
-        
+
         # Other combinations via Kitty protocol
         return _matches_kitty_sequence(data, char_code, modifier)
-    
+
     # Symbol keys
     if key in SYMBOL_KEYS:
         char_code = ord(key)
-        
+
         if ctrl and not alt and not shift:
             ctrl_char = _raw_ctrl_char(key)
             if ctrl_char and data == ctrl_char:
                 return True
-        
+
         if modifier == 0:
             return data == key
-        
+
         return _matches_kitty_sequence(data, char_code, modifier)
-    
+
     return False
 
 
 def parse_key(data: str) -> str | None:
     """
     Parse input data and return the key identifier.
-    
+
     TypeScript Reference: _ts_reference/keys.ts:parseKey
-    
+
     Args:
         data: Raw input data from terminal
-        
+
     Returns:
         Key identifier string or None if not recognized
     """
     # Check legacy sequence map first
     if data in LEGACY_SEQUENCE_KEY_IDS:
         return LEGACY_SEQUENCE_KEY_IDS[data]
-    
+
     # Single character keys
     if len(data) == 1:
         char = data
         code = ord(char)
-        
+
         # Control characters
         if code < 32:
             if code == 9:
@@ -863,7 +861,7 @@ def parse_key(data: str) -> str | None:
             # Ctrl+A to Ctrl+Z
             if 1 <= code <= 26:
                 return f"ctrl+{chr(code + 96)}"
-        
+
         # Regular keys
         if char.isalpha():
             return char.lower()
@@ -871,39 +869,39 @@ def parse_key(data: str) -> str | None:
             return char
         if char == " ":
             return "space"
-    
+
     # Parse Kitty sequence
     parsed = _parse_kitty_sequence(data)
     if parsed:
         cp = parsed["codepoint"]
         mod = parsed["modifier"]
-        
+
         # Build key ID
         key = None
-        
+
         # Check arrow keys
         for name, code in ARROW_CODEPOINTS.items():
             if cp == code:
                 key = name
                 break
-        
+
         # Check functional keys
         if not key:
             for name, code in FUNCTIONAL_CODEPOINTS.items():
                 if cp == code:
                     key = name
                     break
-        
+
         # Regular character
         if not key and 32 <= cp <= 126:
             key = chr(cp).lower()
-        
+
         # Function keys (F1-F12) from codepoints 57344+
         if not key and cp >= 57344:
             fn_num = cp - 57343  # F1 = 57344
             if 1 <= fn_num <= 12:
                 key = f"f{fn_num}"
-        
+
         if key:
             modifiers = []
             if mod & MODIFIERS["shift"]:
@@ -912,9 +910,9 @@ def parse_key(data: str) -> str | None:
                 modifiers.append("alt")
             if mod & MODIFIERS["ctrl"]:
                 modifiers.append("ctrl")
-            
+
             if modifiers:
                 return "+".join(modifiers + [key])
             return key
-    
+
     return None

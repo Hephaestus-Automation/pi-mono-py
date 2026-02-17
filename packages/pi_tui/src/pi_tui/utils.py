@@ -13,7 +13,10 @@ Key functions:
 from __future__ import annotations
 
 import re
-from typing import Callable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 try:
     from wcwidth import wcwidth  # type: ignore[import-untyped]
@@ -39,15 +42,15 @@ def _strip_ansi(text: str) -> str:
 def visible_width(text: str) -> int:
     """
     Calculate the visible width of text, ignoring ANSI codes.
-    
+
     TypeScript Reference: _ts_reference/utils.ts:visibleWidth
-    
+
     Args:
         text: Input text possibly containing ANSI codes
-        
+
     Returns:
         Visible width in terminal columns
-        
+
     Example:
         >>> visible_width("\x1b[31mHello\x1b[0m")
         5
@@ -64,21 +67,21 @@ def truncate_to_width(
 ) -> str:
     """
     Truncate text to max_width, preserving ANSI codes.
-    
+
     TypeScript Reference: _ts_reference/utils.ts:truncateToWidth
-    
+
     Args:
         text: Input text
         max_width: Maximum visible width
         ellipsis: String to append when truncated
         pad: Whether to pad with spaces if shorter
-        
+
     Returns:
         Truncated text with ANSI codes preserved
     """
     if max_width <= 0:
         return ""
-    
+
     total_width = visible_width(text)
     if total_width <= max_width:
         if pad and total_width < max_width:
@@ -88,10 +91,10 @@ def truncate_to_width(
     current_width = 0
     result = []
     ellipsis_width = visible_width(ellipsis)
-    
+
     # If max_width is smaller than ellipsis, we can't really show ellipsis properly
     # but we'll follow the logic of showing it if possible.
-    
+
     i = 0
     while i < len(text):
         # Check for ANSI sequence
@@ -103,18 +106,18 @@ def truncate_to_width(
                 result.append(code)
                 i = next_pos
                 continue
-        
+
         # Regular character
         char_width = max(0, wcwidth(text[i]))
         if current_width + char_width > max_width - ellipsis_width:
             result.append(ellipsis)
             current_width += ellipsis_width
             break
-        
+
         result.append(text[i])
         current_width += char_width
         i += 1
-    
+
     return "".join(result)
 
 
@@ -122,29 +125,28 @@ def truncate_to_width(
 def wrap_text_with_ansi(text: str, width: int) -> list[str]:
     """
     Wrap text to specified width, preserving ANSI codes.
-    
+
     TypeScript Reference: _ts_reference/utils.ts:wrapTextWithAnsi
-    
+
     Args:
         text: Input text
         width: Maximum line width
-        
+
     Returns:
         List of wrapped lines
     """
     if width <= 0:
         return [text]
-    
+
     lines: list[str] = []
     current_line: list[str] = []
     current_width = 0
-    active_styles: list[str] = []
-    
+
     words = text.split(" ")
-    
+
     for word in words:
         word_width = visible_width(word)
-        
+
         if current_width + word_width + (1 if current_line else 0) <= width:
             if current_line:
                 current_line.append(" ")
@@ -156,40 +158,41 @@ def wrap_text_with_ansi(text: str, width: int) -> list[str]:
                 lines.append("".join(current_line))
             current_line = [word]
             current_width = word_width
-    
+
     if current_line:
         lines.append("".join(current_line))
-    
+
     return lines if lines else [""]
 
 
 def extract_ansi_code(text: str, pos: int) -> tuple[str, int] | None:
     """
     Extract ANSI code at position.
-    
+
     TypeScript Reference: _ts_reference/utils.ts:extractAnsiCode
-    
+
     Args:
         text: Input text
         pos: Position to check
-        
+
     Returns:
         Tuple of (code, end_position) or None
     """
     if pos >= len(text) or text[pos] != "\x1b":
         return None
-    
+
     i = pos + 1
     if i >= len(text):
         return None
-    
+
     if text[i] == "[":
         # CSI sequence
         i += 1
-        while i < len(text) and text[i] not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":
+        csi_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        while i < len(text) and text[i] not in csi_chars:
             i += 1
         if i < len(text):
-            return (text[pos:i+1], i + 1)
+            return (text[pos : i + 1], i + 1)
     elif text[i] == "]":
         # OSC sequence
         i += 1
@@ -197,7 +200,7 @@ def extract_ansi_code(text: str, pos: int) -> tuple[str, int] | None:
             i += 1
         if i < len(text):
             return (text[pos:i+1], i + 1)
-    
+
     return None
 
 
@@ -209,22 +212,22 @@ def slice_by_column(
 ) -> str:
     """
     Slice text by visual column position.
-    
+
     TypeScript Reference: _ts_reference/utils.ts:sliceByColumn
-    
+
     Args:
         text: Input text
         start_col: Starting column
         length: Number of columns to extract
         strict: Whether to exclude wide chars at boundary
-        
+
     Returns:
         Sliced text
     """
     result: list[str] = []
     current_col = 0
     end_col = start_col + length
-    
+
     i = 0
     while i < len(text):
         # Handle ANSI codes
@@ -232,7 +235,8 @@ def slice_by_column(
             j = i + 1
             if j < len(text) and text[j] in "[_]":
                 j += 1
-                while j < len(text) and text[j] not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\x07":
+                osc_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\x07"
+                while j < len(text) and text[j] not in osc_chars:
                     j += 1
                 if j < len(text):
                     j += 1
@@ -241,10 +245,10 @@ def slice_by_column(
                     result.append(text[i:j])
             i = j
             continue
-        
+
         char_width = wcwidth(text[i])
         char_end_col = current_col + char_width
-        
+
         # Check if character is in range
         if char_end_col > start_col and current_col < end_col:
             if strict and char_end_col > end_col:
@@ -252,10 +256,10 @@ def slice_by_column(
                 pass
             else:
                 result.append(text[i])
-        
+
         current_col = char_end_col
         i += 1
-    
+
     return "".join(result)
 
 
@@ -266,22 +270,22 @@ def apply_background_to_line(
 ) -> str:
     """
     Apply background color function to a line.
-    
+
     TypeScript Reference: _ts_reference/utils.ts:applyBackgroundToLine
-    
+
     Args:
         line: Input line
         width: Target width
         bg_fn: Function that takes text and returns styled text
-        
+
     Returns:
         Line with background applied
     """
     if bg_fn is None:
         return line
-    
+
     line_width = visible_width(line)
     if line_width < width:
         line += " " * (width - line_width)
-    
+
     return bg_fn(line)

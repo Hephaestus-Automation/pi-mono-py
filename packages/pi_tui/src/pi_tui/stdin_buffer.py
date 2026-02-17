@@ -22,9 +22,11 @@ TypeScript Reference: _ts_reference/stdin-buffer.ts
 from __future__ import annotations
 
 import asyncio
-from typing import Callable, Literal
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Literal
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 ESC = "\x1b"
 BRACKETED_PASTE_START = "\x1b[200~"

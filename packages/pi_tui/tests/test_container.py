@@ -4,6 +4,7 @@ Tests for the Container component.
 
 from pi_tui.container import Container
 
+
 class TestContainer:
     # =========================================================================
     # A. Child Management Tests
@@ -107,7 +108,7 @@ class TestContainer:
         children = [mock_component_factory() for _ in range(3)]
         for child in children:
             container.add_child(child)
-        
+
         container.invalidate()
         for child in children:
             assert child.invalidate_calls == 1
@@ -120,7 +121,7 @@ class TestContainer:
         container = Container()
         container.add_child(mock_component_factory(["line 1"]))
         container.add_child(mock_component_factory(["line 2", "line 3"]))
-        
+
         output = container.render(80)
         assert output == ["line 1", "line 2", "line 3"]
 

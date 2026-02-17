@@ -6,10 +6,13 @@ TypeScript Reference: _ts_reference/components/text.ts
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import TYPE_CHECKING
 
 from pi_tui.component import Component
 from pi_tui.utils import apply_background_to_line, visible_width, wrap_text_with_ansi
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class Text(Component):

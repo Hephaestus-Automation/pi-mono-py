@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import asyncio
 import random
-from typing import Any, Callable, TypeVar, Optional
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 
@@ -51,7 +52,7 @@ async def retry_with_backoff(
         RetryError: If all attempts are exhausted
         Exception: Any non-transient exception from func
     """
-    last_exception: Optional[Exception] = None
+    last_exception: Exception | None = None
     delay = initial_delay_ms / 1000.0  # Convert to seconds
 
     for attempt in range(max_attempts):
@@ -176,7 +177,7 @@ async def retry_http_request(
         RetryError: If all attempts are exhausted
         Exception: Any non-transient exception
     """
-    last_exception: Optional[Exception] = None
+    last_exception: Exception | None = None
     delay = initial_delay_ms / 1000.0
 
     for attempt in range(max_attempts):
@@ -188,7 +189,7 @@ async def retry_http_request(
             # Extract HTTP status if available
             status_code = None
             if hasattr(e, "response"):
-                response = getattr(e, "response")
+                response = e.response
                 if hasattr(response, "status_code"):
                     status_code = response.status_code
 

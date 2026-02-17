@@ -5,7 +5,6 @@
 name = "pi-tui"
 version = "0.1.0"
 description = "Terminal UI library with differential rendering - Python port of @mariozechner/pi-tui"
-readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
@@ -20,7 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Terminals",
-    "Topic :: User Interfaces",
+    "Topic :: Software Development :: User Interfaces",
 ]
 
 dependencies = [

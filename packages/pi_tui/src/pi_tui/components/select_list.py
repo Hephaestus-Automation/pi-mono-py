@@ -7,11 +7,14 @@ TypeScript Reference: _ts_reference/components/select-list.ts
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from pi_tui.component import Component
-from pi_tui.keys import matches_key, Key
+from pi_tui.keys import Key, matches_key
 from pi_tui.utils import truncate_to_width
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def _normalize_to_single_line(text: str) -> str:
@@ -58,7 +61,7 @@ class DefaultSelectListTheme:
 class SelectList(Component):
     """
     SelectList component - interactive item selection list.
-    
+
     TypeScript Reference: _ts_reference/components/select-list.ts:SelectList
     """
 
@@ -131,13 +134,19 @@ class SelectList(Component):
 
                     if remaining_width > 10:
                         truncated_desc = truncate_to_width(description, remaining_width, "")
-                        line = self._theme.selected_text(f"→ {truncated_value}{spacing}{truncated_desc}")
+                        line = self._theme.selected_text(
+                            f"→ {truncated_value}{spacing}{truncated_desc}"
+                        )
                     else:
                         max_width = width - prefix_width - 2
-                        line = self._theme.selected_text(f"→ {truncate_to_width(display_value, max_width, '')}")
+                        line = self._theme.selected_text(
+                            f"→ {truncate_to_width(display_value, max_width, '')}"
+                        )
                 else:
                     max_width = width - prefix_width - 2
-                    line = self._theme.selected_text(f"→ {truncate_to_width(display_value, max_width, '')}")
+                    line = self._theme.selected_text(
+                        f"→ {truncate_to_width(display_value, max_width, '')}"
+                    )
             else:
                 display_value = item.label or item.value
                 prefix = "  "

@@ -3,12 +3,13 @@ Tests for pi_tui/keys.py - keyboard input parsing.
 """
 
 import pytest
+
 from pi_tui.keys import (
     Key,
+    is_kitty_protocol_active,
     matches_key,
     parse_key,
     set_kitty_protocol_active,
-    is_kitty_protocol_active,
 )
 
 
