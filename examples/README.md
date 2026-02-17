@@ -243,3 +243,101 @@ export GOOGLE_API_KEY="your-key"
 - [pi-mono-py README](../README.md)
 - [Workspace Guide](../WORKSPACE.md)
 - [pi-ai Documentation](../packages/pi_ai/README.md)
+
+## Coding Agent (Example 7)
+
+The `07_coding_agent.py` example demonstrates a full-featured coding assistant with file system tools.
+
+### Available Tools
+
+| Tool | Description | Use Cases |
+|------|-------------|-----------|
+| `read_file` | Read file contents with line numbers | Review code, check file structure |
+| `write_file` | Create or overwrite files | Create new files, write code snippets |
+| `edit_file` | Search and replace text in files | Fix bugs, refactor code |
+| `list_directory` | List files and directories | Explore project structure |
+| `run_command` | Execute shell commands (30s timeout) | Run tests, build projects |
+
+### Example Usage
+
+```bash
+# Run the coding agent
+cd pi-mono-py
+uv run --directory examples python 07_coding_agent.py
+
+# Ask the agent to:
+# - Read a file: "Read the main.py file"
+# - Edit a file: "Replace TODO with DONE in todos.txt"
+# - List files: "What files are in the examples directory?"
+# - Run tests: "Run pytest"
+```
+
+### System Prompt
+
+The coding agent uses a specialized system prompt:
+
+- Always read files before suggesting changes
+- Be precise with text replacements (exact matches)
+- Show previews of file contents before editing
+- Explain what changes you're making and why
+- Use list_directory to understand project structure
+- Handle errors gracefully and suggest solutions
+
+### Tool Design
+
+Each tool follows best practices:
+
+1. **Parameter Validation**: JSON Schema with required fields
+2. **Error Handling**: Try-catch with meaningful error messages
+3. **Rich Output**: Detailed results with context
+4. **Safety**: Command timeouts, path validation
+5. **Details**: Structured metadata for programmatic access
+
+### Sample Interactions
+
+**Read File:**
+```
+User: Read the README.md file
+Agent: [Tool: read_file]
+       File: README.md
+
+       1 | # Agent Examples
+       2 |
+       3 | This directory contains examples...
+       ...
+       [Tool Complete]
+```
+
+**Edit File:**
+```
+User: Replace "TODO" with "DONE" in todos.txt
+Agent: [Tool: edit_file]
+       Replaced 3 occurrence(s) in todos.txt
+       [Tool Complete]
+```
+
+**List Directory:**
+```
+User: What files are in the examples directory?
+Agent: [Tool: list_directory]
+       Contents of examples:
+       --------------------------------------------------
+         [F] 00_quick_start.py
+         [F] 01_simple_agent.py
+         ...
+       --------------------------------------------------
+       Total: 8 items
+       [Tool Complete]
+```
+
+**Run Command:**
+```
+User: Run pytest on the tests directory
+Agent: [Tool: run_command]
+       Command: pytest packages/
+       Exit code: 0
+       
+       STDOUT:
+       ...
+       [Tool Complete]
+```

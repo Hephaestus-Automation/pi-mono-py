@@ -13,6 +13,7 @@ members = ["packages/*"]
 pi-ai = { workspace = true }
 pi-agent = { workspace = true }
 pi-tui = { workspace = true }
+pi-coding = { workspace = true }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
